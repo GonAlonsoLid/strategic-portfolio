@@ -48,3 +48,7 @@ python scripts/run_backtest.py
 ## Reproducibility
 
 Set `random_state` in `config/config.yaml` (under `models`). Paths and parameters are config-driven.
+
+## Research design
+
+See [docs/RESEARCH_NOTES.md](docs/RESEARCH_NOTES.md) for mapping to the Hedge Funds syllabus and underreaction/inattention lecture: features (momentum skip-month, quality proxy), rank weighting, VaR/skewness/subperiod evaluation, and suggested extensions.

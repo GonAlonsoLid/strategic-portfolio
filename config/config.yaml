@@ -54,7 +54,7 @@ backtest:
   gross_exposure: 2.0
   net_exposure: 0.0
   transaction_cost_bps: 10
-  weighting: "equal"  # equal | probability | risk_parity
+  weighting: "equal"  # equal | probability | risk_parity | rank
 
 # Robustness
 robustness:

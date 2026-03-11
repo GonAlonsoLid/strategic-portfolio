@@ -6,7 +6,14 @@ import pandas as pd
 import numpy as np
 
 from src.utils.config_loader import load_config, get_section
-from src.features.rolling_features import add_momentum_features, add_volatility_features, add_liquidity_features, add_abnormal_performance
+from src.features.rolling_features import (
+    add_momentum_features,
+    add_momentum_skip_month,
+    add_volatility_features,
+    add_liquidity_features,
+    add_abnormal_performance,
+    add_quality_proxy,
+)
 
 
 def build_market_cap_rank(df: pd.DataFrame, *, date_col: str = "date", cap_col: str = "market_cap", permno_col: str = "permno") -> pd.DataFrame:
@@ -71,9 +78,11 @@ def build_feature_panel(
         panel["market_ret"] = panel.groupby("date")["ret"].transform("mean")
 
     panel = add_momentum_features(panel, momentum_w)
+    panel = add_momentum_skip_month(panel, long_window=252, skip_days=21)
     panel = add_volatility_features(panel, vol_w)
     panel = add_liquidity_features(panel, windows=[21])
     panel = add_abnormal_performance(panel, momentum_w, market_ret_col="market_ret")
+    panel = add_quality_proxy(panel, vol_window=63)
     panel = build_market_cap_rank(panel)
 
     panel["label_join"] = build_joiner_label(panel, forward_days=label_days)
@@ -82,10 +91,11 @@ def build_feature_panel(
     # Feature columns (all rolling and cross-sectional)
     feat_cols = (
         [c for c in panel.columns if c.startswith("ret_") and "d" in c]
+        + [c for c in panel.columns if c == "mom_12m_skip1m"]
         + [c for c in panel.columns if c.startswith("vol_")]
         + [c for c in panel.columns if c.startswith("turnover_") or c.startswith("volume_avg_")]
         + [c for c in panel.columns if c.startswith("excess_ret_")]
-        + ["market_cap", "market_cap_rank", "size_percentile"]
+        + ["market_cap", "market_cap_rank", "size_percentile", "quality_proxy"]
     )
     feat_cols = [c for c in feat_cols if c in panel.columns]
     key_feats = [c for c in ["ret_21d", "market_cap_rank", "size_percentile"] if c in panel.columns]

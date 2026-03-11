@@ -13,7 +13,7 @@ from src.models.join_prediction import run_join_prediction
 from src.models.leave_prediction import run_leave_prediction
 from src.portfolio.portfolio_construction import build_long_short_portfolio
 from src.backtesting.backtester import Backtester
-from src.evaluation.performance_metrics import compute_performance_metrics, compute_drawdowns
+from src.evaluation.performance_metrics import compute_performance_metrics, compute_drawdowns, compute_subperiod_metrics
 from src.evaluation.factor_analysis import run_factor_regression, load_factors
 from src.utils.plotting import plot_cumulative_returns, plot_drawdowns, plot_factor_loadings
 
@@ -103,9 +103,12 @@ def main() -> None:
     result = bt.run_backtest(target_weights)
     ret = result["returns"]
 
-    # Metrics
+    # Metrics (incl. VaR, skewness; syllabus: allocators look at these)
     metrics = compute_performance_metrics(ret)
     pd.DataFrame([metrics]).to_csv(out_tab / "backtest_summary_predictive.csv", index=False)
+    subperiod = compute_subperiod_metrics(ret, window_years=3.0)
+    if subperiod:
+        pd.DataFrame(subperiod[-10:]).to_csv(out_tab / "backtest_subperiod_3y.csv", index=False)
     dd_df = compute_drawdowns(ret)
     plot_cumulative_returns(ret, title="Strategy cumulative returns", save_path=out_fig / "cumulative_returns.png")
     plot_drawdowns(ret, title="Drawdown", save_path=out_fig / "drawdown.png")

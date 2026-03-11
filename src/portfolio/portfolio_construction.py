@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 from src.utils.config_loader import load_config, get_section
-from src.portfolio.weighting_schemes import equal_weight, probability_weight, risk_parity_weight
+from src.portfolio.weighting_schemes import equal_weight, probability_weight, risk_parity_weight, rank_weight
 
 
 def build_long_short_portfolio(
@@ -62,6 +62,9 @@ def build_long_short_portfolio(
             w_long = risk_parity_weight(j, vol, top_decile, gross_target=gross_exposure / 2)
             vol_l = panel[panel["date"] <= rb_date].groupby("permno")["ret"].std().reindex(lv.index).fillna(0.01)
             w_short = -risk_parity_weight(lv, vol_l, top_decile, gross_target=gross_exposure / 2)
+        elif weighting == "rank":
+            w_long = rank_weight(j, top_decile, gross_target=gross_exposure / 2)
+            w_short = -rank_weight(lv, top_decile, gross_target=gross_exposure / 2)
         else:
             w_long = equal_weight(j, top_decile, gross_target=gross_exposure / 2)
             w_short = -equal_weight(lv, top_decile, gross_target=gross_exposure / 2)
