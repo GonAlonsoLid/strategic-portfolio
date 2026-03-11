@@ -36,6 +36,9 @@ results/figures/*.pdf
 results/tables/*.csv
 results/tables/*.xlsx
 
+notebooks/
+
+
 # OS
 .DS_Store
 Thumbs.db
@@ -56,3 +59,4 @@ htmlcov/
 *.log
 .env.local
 .env.*.local
+data/raw/daily.csv.gz
