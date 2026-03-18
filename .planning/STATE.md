@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: planning
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-03-18T10:52:44.096Z"
+last_activity: 2026-03-18 — Roadmap created, project initialized
+progress:
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
+---
+
 # Project State
 
 ## Project Reference
@@ -14,7 +30,7 @@ Plan: 0 of TBD in current phase
 Status: Ready to plan
 Last activity: 2026-03-18 — Roadmap created, project initialized
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -34,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01 | 2m 16s | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -45,6 +62,8 @@ Recent decisions affecting current work:
 - IC/ICIR chosen as primary model quality metric: standard in quant finance, professor unlikely to expect it — differentiator
 - SHAP chosen over permutation importance: more rigorous for academic submission
 - Bootstrap Sharpe CI explicitly addresses overfitting concern mentioned in syllabus
+- [Phase 01]: GradientBoosting uses per-fold sample_weight (no class_weight param); XGBoost uses scale_pos_weight computed per fold from imbalance ratio
+- [Phase 01]: fwd_ret_ columns included in feature DataFrames for IC computation but excluded from model training via get_feature_columns filter
 
 ### Pending Todos
 
@@ -57,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18
-Stopped at: Roadmap created, ready to plan Phase 1
+Last session: 2026-03-18T10:52:44.094Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

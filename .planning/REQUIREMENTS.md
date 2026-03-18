@@ -8,10 +8,10 @@
 ### Analysis — Model Quality
 
 - [ ] **MODEL-01**: IC (Information Coefficient) computed for each model: rank correlation between predicted join/leave probability and realized 21-day forward return
-- [ ] **MODEL-02**: IC decay curve by holding horizon (1d, 5d, 21d, 63d) for best model — shows how predictive power fades
+- [x] **MODEL-02**: IC decay curve by holding horizon (1d, 5d, 21d, 63d) for best model — shows how predictive power fades
 - [ ] **MODEL-03**: ICIR (IC / std(IC)) computed per model — industry-standard signal quality metric
 - [ ] **MODEL-04**: SHAP feature importance for best model — interpretable attribution of which signals drive predictions
-- [ ] **MODEL-05**: Model comparison table: AUC, Brier score, OOS accuracy, portfolio Sharpe per model type
+- [x] **MODEL-05**: Model comparison table: AUC, Brier score, OOS accuracy, portfolio Sharpe per model type
 
 ### Analysis — Portfolio & Performance
 
@@ -63,10 +63,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | MODEL-01 | Phase 1 — Model Quality Analysis | Pending |
-| MODEL-02 | Phase 1 — Model Quality Analysis | Pending |
+| MODEL-02 | Phase 1 — Model Quality Analysis | Complete |
 | MODEL-03 | Phase 1 — Model Quality Analysis | Pending |
 | MODEL-04 | Phase 1 — Model Quality Analysis | Pending |
-| MODEL-05 | Phase 1 — Model Quality Analysis | Pending |
+| MODEL-05 | Phase 1 — Model Quality Analysis | Complete |
 | PERF-01 | Phase 2 — Performance & Robustness | Pending |
 | PERF-02 | Phase 2 — Performance & Robustness | Pending |
 | PERF-03 | Phase 2 — Performance & Robustness | Pending |
