@@ -75,7 +75,7 @@ def _get_model(name: str, config: dict, random_state: int, use_gpu: bool = False
             verbose=-1,
         )
         if use_gpu:
-            lgb_params["device"] = "gpu"
+            lgb_params["device"] = "cuda"
         return lgb.LGBMClassifier(**lgb_params)
     return None
 
