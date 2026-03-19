@@ -2,6 +2,7 @@
 
 Pass --rebuild-features to force feature regeneration even if cached files exist.
 Pass --skip-quality to skip model quality analysis (IC, ICIR, SHAP) after training.
+Pass --use-gpu to enable GPU acceleration for XGBoost and LightGBM (auto-detects CUDA/MPS).
 """
 import sys
 from pathlib import Path
@@ -116,10 +117,18 @@ def run_model_quality_analysis(
 
 def main() -> None:
     import argparse
+    from src.models.model_utils import detect_gpu
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--rebuild-features", action="store_true", help="Force feature regeneration")
     parser.add_argument("--skip-quality", action="store_true", help="Skip model quality analysis after training")
+    parser.add_argument("--use-gpu", action="store_true", help="Enable GPU for XGBoost/LightGBM (auto-detects CUDA/MPS)")
     args = parser.parse_args()
+
+    if args.use_gpu:
+        gpu_device = detect_gpu()
+        print(f"GPU requested — detected device: {gpu_device}")
+    use_gpu = args.use_gpu
 
     cfg = load_config()
     paths = load_config_paths(cfg)
@@ -152,9 +161,9 @@ def main() -> None:
         save_feature_datasets(features_join, features_leave, config=cfg)
 
     print("Running join prediction...")
-    scores_df, metrics_df = run_join_prediction(features_join, config=cfg)
+    scores_df, metrics_df = run_join_prediction(features_join, config=cfg, use_gpu=use_gpu)
     print("Running leave prediction...")
-    run_leave_prediction(features_leave, config=cfg)
+    run_leave_prediction(features_leave, config=cfg, use_gpu=use_gpu)
     print("Done. Scores in data/processed, metrics in results/tables.")
 
     # Save best model (by avg ROC-AUC) for SHAP analysis in Plan 03

@@ -7,6 +7,26 @@ from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_sco
 from sklearn.preprocessing import StandardScaler
 
 
+def detect_gpu() -> str:
+    """Return 'cuda', 'mps', or 'cpu' based on available hardware."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "cuda"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+    except ImportError:
+        pass
+    try:
+        import subprocess
+        result = subprocess.run(["nvidia-smi"], capture_output=True, timeout=5)
+        if result.returncode == 0:
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
+
+
 def make_rolling_splits(
     df: pd.DataFrame,
     train_years: int = 5,

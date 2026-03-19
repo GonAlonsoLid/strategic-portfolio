@@ -45,6 +45,10 @@ models:
     n_estimators: 100
     max_depth: 4
     learning_rate: 0.1
+  lightgbm:
+    n_estimators: 100
+    max_depth: 4
+    learning_rate: 0.1
 
 # Backtest
 backtest:

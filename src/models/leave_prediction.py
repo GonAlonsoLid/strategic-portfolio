@@ -8,7 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
 from src.utils.config_loader import load_config, get_section
-from src.models.model_utils import make_rolling_splits, train_and_evaluate, get_feature_columns
+from src.models.model_utils import make_rolling_splits, train_and_evaluate, get_feature_columns, detect_gpu
 
 try:
     import xgboost as xgb  # noqa: F401
@@ -16,8 +16,14 @@ try:
 except Exception:
     HAS_XGB = False
 
+try:
+    import lightgbm as lgb  # noqa: F401
+    HAS_LGB = True
+except Exception:
+    HAS_LGB = False
 
-def _get_model(name: str, config: dict, random_state: int):
+
+def _get_model(name: str, config: dict, random_state: int, use_gpu: bool = False):
     cfg = config.get("models", {})
     if name == "logistic":
         p = cfg.get("logistic", {})
@@ -42,15 +48,34 @@ def _get_model(name: str, config: dict, random_state: int):
         )
     if name == "xgboost" and HAS_XGB:
         p = cfg.get("xgboost", {})
-        return xgb.XGBClassifier(
+        xgb_params: dict = dict(
             n_estimators=p.get("n_estimators", 100),
             max_depth=p.get("max_depth", 4),
             learning_rate=p.get("learning_rate", 0.1),
             scale_pos_weight=1,
             random_state=random_state,
-            use_label_encoder=False,
             eval_metric="logloss",
         )
+        if use_gpu:
+            xgb_version = tuple(int(x) for x in xgb.__version__.split(".")[:2])
+            if xgb_version >= (2, 0):
+                xgb_params["device"] = "cuda"
+            else:
+                xgb_params["tree_method"] = "gpu_hist"
+        return xgb.XGBClassifier(**xgb_params)
+    if name == "lightgbm" and HAS_LGB:
+        p = cfg.get("lightgbm", {})
+        lgb_params: dict = dict(
+            n_estimators=p.get("n_estimators", 100),
+            max_depth=p.get("max_depth", 4),
+            learning_rate=p.get("learning_rate", 0.1),
+            class_weight="balanced",
+            random_state=random_state,
+            verbose=-1,
+        )
+        if use_gpu:
+            lgb_params["device"] = "gpu"
+        return lgb.LGBMClassifier(**lgb_params)
     return None
 
 
@@ -61,6 +86,7 @@ def run_leave_prediction(
     model_types: List[str] | None = None,
     output_scores_path: str | Path | None = None,
     output_metrics_path: str | Path | None = None,
+    use_gpu: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Train leave models over rolling windows; return (scores panel, metrics table)."""
     cfg = config or load_config()
@@ -74,6 +100,14 @@ def run_leave_prediction(
     model_types = model_types or get_section(cfg, "models", "types") or ["logistic", "random_forest", "gradient_boosting"]
     if "xgboost" in model_types and not HAS_XGB:
         model_types = [m for m in model_types if m != "xgboost"]
+    if "lightgbm" in model_types and not HAS_LGB:
+        model_types = [m for m in model_types if m != "lightgbm"]
+    if use_gpu:
+        gpu_device = detect_gpu()
+        print(f"GPU mode enabled — device: {gpu_device}")
+        if gpu_device == "cpu":
+            print("WARNING: No GPU detected; falling back to CPU.")
+            use_gpu = False
     train_years = get_section(cfg, "models", "train_years") or 5
     test_years = get_section(cfg, "models", "test_years") or 1
     random_state = get_section(cfg, "models", "random_state") or 42
@@ -91,7 +125,7 @@ def run_leave_prediction(
     metrics_rows = []
 
     for model_name in model_types:
-        model = _get_model(model_name, cfg, random_state)
+        model = _get_model(model_name, cfg, random_state, use_gpu=use_gpu)
         if model is None:
             continue
         scale = model_name == "logistic"
