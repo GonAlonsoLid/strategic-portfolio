@@ -26,7 +26,7 @@ features:
 
 # Models
 models:
-  types: ["xgboost", "lightgbm"]  # "logistic" and "random_forest" excluded (no GPU support)
+  types: ["xgboost"]  # lightgbm excluded (no CUDA build); logistic/random_forest excluded (no GPU)
   train_years: 5
   test_years: 1
   random_state: 42
