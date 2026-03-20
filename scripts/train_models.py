@@ -3,11 +3,9 @@
 Pass --rebuild-features to force feature regeneration even if cached files exist.
 Pass --skip-quality to skip model quality analysis (IC, ICIR, SHAP) after training.
 Pass --use-gpu to enable GPU acceleration for XGBoost and LightGBM (auto-detects CUDA/MPS).
-With --use-gpu and 2+ GPUs available, join and leave predictions run in parallel
-on separate GPUs automatically.
+With --use-gpu, models use GPU acceleration when available; predictions run sequentially.
 """
 import sys
-import multiprocessing as mp
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -19,39 +17,6 @@ from src.data.load_data import load_config_paths
 from src.features.feature_engineering import build_feature_panel, save_feature_datasets
 from src.models.join_prediction import run_join_prediction
 from src.models.leave_prediction import run_leave_prediction
-
-
-def _count_gpus() -> int:
-    """Return number of available CUDA GPUs via nvidia-smi."""
-    import subprocess
-    try:
-        r = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if r.returncode == 0:
-            return len([l for l in r.stdout.strip().splitlines() if l.strip()])
-    except Exception:
-        pass
-    return 0
-
-
-def _prediction_worker(task: str, features_path: str, cfg: dict, gpu_id: int) -> None:
-    """Subprocess worker: load features from parquet, run prediction on a specific GPU.
-
-    CUDA_VISIBLE_DEVICES restricts the process to one GPU; 'cuda' inside XGBoost/LightGBM
-    resolves to that GPU only.
-    """
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
-    df = pd.read_parquet(features_path)
-    if task == "join":
-        print(f"[GPU {gpu_id}] Starting JOIN prediction ({len(df):,} rows)...")
-        run_join_prediction(df, config=cfg, use_gpu=True)
-    else:
-        print(f"[GPU {gpu_id}] Starting LEAVE prediction ({len(df):,} rows)...")
-        run_leave_prediction(df, config=cfg, use_gpu=True)
 
 
 def run_model_quality_analysis(
@@ -196,44 +161,11 @@ def main() -> None:
         features_join, features_leave = build_feature_panel(panel, config=cfg)
         save_feature_datasets(features_join, features_leave, config=cfg)
 
-    n_gpus = _count_gpus() if use_gpu else 0
-    tables = base / paths.get("results_tables", "results/tables")
-
-    if use_gpu and n_gpus >= 2:
-        # Parallel execution: join on GPU 0, leave on GPU 1.
-        # Each worker reads its own parquet (already on disk) and saves results independently.
-        # spawn avoids CUDA context inheritance issues from the parent process.
-        print(f"Multi-GPU mode ({n_gpus} GPUs): join→GPU 0 | leave→GPU 1 (parallel)")
-        ctx = mp.get_context("spawn")
-        p_join = ctx.Process(
-            target=_prediction_worker,
-            args=("join", str(features_join_path), cfg, 0),
-        )
-        p_leave = ctx.Process(
-            target=_prediction_worker,
-            args=("leave", str(features_leave_path), cfg, 1),
-        )
-        p_join.start()
-        p_leave.start()
-        p_join.join()
-        p_leave.join()
-        if p_join.exitcode != 0 or p_leave.exitcode != 0:
-            raise RuntimeError(
-                f"Prediction worker failed — join exit={p_join.exitcode}, leave exit={p_leave.exitcode}"
-            )
-        # Reload results saved by worker processes
-        scores_df = pd.read_parquet(processed / "join_scores.parquet")
-        metrics_csv = tables / "model_performance_join.csv"
-        metrics_df = pd.read_csv(metrics_csv) if metrics_csv.exists() else pd.DataFrame()
-        print("Done. Both GPUs finished.")
-    else:
-        if use_gpu and n_gpus < 2:
-            print(f"Single GPU detected ({n_gpus}) — running sequentially.")
-        print("Running join prediction...")
-        scores_df, metrics_df = run_join_prediction(features_join, config=cfg, use_gpu=use_gpu)
-        print("Running leave prediction...")
-        run_leave_prediction(features_leave, config=cfg, use_gpu=use_gpu)
-        print("Done. Scores in data/processed, metrics in results/tables.")
+    print("Running join prediction...")
+    scores_df, metrics_df = run_join_prediction(features_join, config=cfg, use_gpu=use_gpu)
+    print("Running leave prediction...")
+    run_leave_prediction(features_leave, config=cfg, use_gpu=use_gpu)
+    print("Done. Scores in data/processed, metrics in results/tables.")
 
     # Save best model (by avg ROC-AUC) for SHAP analysis in Plan 03
     if not metrics_df.empty and len(scores_df) > 0:
