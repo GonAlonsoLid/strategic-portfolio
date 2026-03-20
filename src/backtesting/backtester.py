@@ -49,7 +49,7 @@ class Backtester:
         })
         target_weights["date"] = pd.to_datetime(target_weights["date"]).dt.normalize()
         rebal_dates = sorted(target_weights["date"].unique())
-        all_dates = pd.to_datetime(self.panel[self.date_col].unique()).sort_values()
+        all_dates = pd.DatetimeIndex(pd.to_datetime(self.panel[self.date_col].unique())).sort_values()
         # Pivot to (rebal_date x permno), then reindex to all_dates and ffill
         w_pivot = target_weights.pivot_table(index="date", columns="permno", values="weight", aggfunc="first")
         w_daily = w_pivot.reindex(all_dates).ffill().fillna(0)

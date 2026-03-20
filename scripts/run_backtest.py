@@ -11,11 +11,11 @@ from src.data.preprocess_data import build_daily_panel
 from src.features.feature_engineering import build_feature_panel, save_feature_datasets
 from src.models.join_prediction import run_join_prediction
 from src.models.leave_prediction import run_leave_prediction
-from src.portfolio.portfolio_construction import build_long_short_portfolio
+from src.portfolio.portfolio_construction import build_long_short_portfolio, build_perfect_foresight_portfolio
 from src.backtesting.backtester import Backtester
 from src.evaluation.performance_metrics import compute_performance_metrics, compute_drawdowns, compute_subperiod_metrics
 from src.evaluation.factor_analysis import run_factor_regression, load_factors
-from src.utils.plotting import plot_cumulative_returns, plot_drawdowns, plot_factor_loadings
+from src.utils.plotting import plot_cumulative_returns, plot_drawdowns, plot_factor_loadings, plot_strategy_comparison
 
 
 def main() -> None:
@@ -120,6 +120,40 @@ def main() -> None:
         pd.DataFrame([fac_res]).to_csv(out_tab / "factor_loadings_predictive.csv", index=False)
         if fac_res.get("betas"):
             plot_factor_loadings(pd.Series(fac_res["betas"]), save_path=out_fig / "factor_loadings.png")
+
+    # ── Omniscient benchmark ──────────────────────────────────────────────────
+    # events_join / events_leave are positional but unused inside the function;
+    # it works entirely from panel["is_sp500"]. Passing None is correct.
+    pf_weights = build_perfect_foresight_portfolio(
+        panel, None, None, forward_days=63, top_decile=0.10
+    )
+    if pf_weights.empty:
+        print("WARNING: perfect foresight portfolio is empty — skipping benchmark.")
+    else:
+        pf_result = bt.run_backtest(pf_weights)
+        ret_pf = pf_result["returns"]   # run_backtest returns a dict; extract Series
+
+        # Benchmark metrics
+        metrics_pf = compute_performance_metrics(ret_pf)
+        pd.DataFrame([metrics_pf]).to_csv(out_tab / "backtest_summary_omniscient.csv", index=False)
+
+        # Strategy comparison table (long format: one row per strategy)
+        comp = pd.DataFrame([
+            {"strategy": "Predictive", **metrics},
+            {"strategy": "Omniscient", **metrics_pf},
+        ])
+        comp.to_csv(out_tab / "strategy_comparison.csv", index=False)
+
+        # Overlaid cumulative returns (align on common date range)
+        common_start = max(ret.index.min(), ret_pf.index.min())
+        plot_strategy_comparison(
+            {
+                "Predictive": ret[ret.index >= common_start],
+                "Omniscient": ret_pf[ret_pf.index >= common_start],
+            },
+            save_path=out_fig / "cumulative_returns_comparison.png",
+        )
+        print("Benchmark metrics:", metrics_pf)
 
     print("Done. Results in results/figures and results/tables.")
     print("Metrics:", metrics)

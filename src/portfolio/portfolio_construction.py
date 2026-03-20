@@ -96,7 +96,7 @@ def build_perfect_foresight_portfolio(
     panel["label_join_ff"] = ((panel["is_sp500"] == False) & (panel["_future_join"] == True)).astype(int)
     panel["label_leave_ff"] = ((panel["is_sp500"] == True) & (panel["_future_leave"] == False)).astype(int)
 
-    dates = pd.to_datetime(panel["date"].unique()).sort_values()
+    dates = pd.DatetimeIndex(pd.to_datetime(panel["date"].unique())).sort_values()
     if rebalance_freq == "monthly":
         df_d = pd.DataFrame({"date": dates})
         df_d["ym"] = df_d["date"].dt.to_period("M")
