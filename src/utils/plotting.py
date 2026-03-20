@@ -72,6 +72,35 @@ def plot_cumulative_returns(
     plt.close(fig)
 
 
+def plot_strategy_comparison(
+    series: dict,
+    *,
+    title: str = "Strategy comparison: cumulative returns",
+    save_path=None,
+) -> None:
+    """Overlay cumulative returns for multiple strategies.
+
+    Args:
+        series: dict mapping strategy label (str) to daily return pd.Series.
+        title: Plot title.
+        save_path: If set, save figure here.
+    """
+    set_plot_style()
+    fig, ax = plt.subplots()
+    for label, ret in series.items():
+        cum = (1 + ret).cumprod()
+        ax.plot(cum.index, cum.values, linewidth=2, label=label)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Cumulative return")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_drawdowns(
     returns: pd.Series,
     *,
