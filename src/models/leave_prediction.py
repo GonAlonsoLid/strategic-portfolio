@@ -143,7 +143,7 @@ def run_leave_prediction(
         for fold, (train_idx, test_idx) in enumerate(splits):
             X_train, X_test = X.loc[train_idx], X.loc[test_idx]
             y_train, y_test = y.loc[train_idx], y.loc[test_idx]
-            if y_train.nunique() < 2 or y_test.nunique() < 2:
+            if y_train.nunique() < 2:
                 print(f"  [{time.strftime('%H:%M:%S')}] Fold {fold+1:02d}/{n_folds} — skipped (single class)")
                 continue
 

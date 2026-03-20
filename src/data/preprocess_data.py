@@ -104,17 +104,14 @@ def build_daily_panel(
     # Drop duplicates and sort
     panel = panel.drop_duplicates(subset=["date", "permno"]).sort_values(["date", "permno"]).reset_index(drop=True)
 
-    # Initial constituents: permnos that appear in 1995 and are not in ADD events in 1995
-    first_date = pd.Timestamp("1995-01-01")
-    permnos_1995 = set(panel.loc[panel["date"].dt.year == 1995, "permno"].unique())
-    add_1995_permnos = set(events[(events["event_type"] == "ADD") & (events["effective_date"].dt.year == 1995)]["permno"].unique())
-    initial_constituents = permnos_1995 - add_1995_permnos
-
+    # Initial constituents: the dataset includes 483 ADD events on 1994-12-30 representing
+    # the initial S&P 500 members. Start with empty membership and let the event loop handle
+    # everything (including those 1994-12-30 ADD events).
     # Build daily membership: for each date, set of permnos in index
     all_dates = panel["date"].unique()
     all_dates = sorted(all_dates)
     # Sparse: only store (date, permno) where is_sp500 True
-    membership = set(initial_constituents)
+    membership = set()
     date_members: dict[pd.Timestamp, set] = {}
     for d in all_dates:
         # Apply DEL on this date

@@ -152,18 +152,22 @@ def build_ticker_permno_bridge(
 ) -> pd.DataFrame:
     """Build a Ticker <-> PERMNO bridge from daily.csv (one row per PERMNO with latest Ticker).
 
-    Uses a sample of rows to avoid loading full file. Returns columns: permno, ticker, date.
+    Reads the full file in chunks to cover all PERMNOs. Returns columns: permno, ticker, date.
     """
     raw_path = prices_path or load_config_paths(config).get("raw_prices", "data/raw/daily.csv")
     base = _project_root() / raw_path if isinstance(raw_path, str) else Path(raw_path)
     usecols = ["PERMNO", "DlyCalDt", "Ticker"]
     first = pd.read_csv(base, nrows=0)
     usecols = [c for c in usecols if c in first.columns]
-    # Read a sample of rows and take unique PERMNO-Ticker pairs (prefer recent)
-    chunk = pd.read_csv(base, usecols=usecols, nrows=2_000_000, parse_dates=["DlyCalDt"], low_memory=False)
-    chunk = chunk.rename(columns={"PERMNO": "permno", "DlyCalDt": "date", "Ticker": "ticker"})
-    chunk["ticker"] = chunk["ticker"].astype(str).str.strip().str.upper()
-    # Normalize ticker: strip exchange suffix to match events
-    chunk["ticker_norm"] = chunk["ticker"].str.replace(r"\.[A-Z]+$", "", regex=True).str.replace(r"\^.*$", "", regex=True)
-    bridge = chunk.drop_duplicates(subset=["permno", "ticker_norm"], keep="last")[["permno", "ticker_norm", "date"]].rename(columns={"ticker_norm": "ticker"})
+    # Read full file in chunks to collect all unique PERMNO-Ticker pairs across the entire dataset.
+    # nrows=2_000_000 was insufficient (covered only ~780 of ~10,000+ PERMNOs in a 58M-row file).
+    accumulated: list[pd.DataFrame] = []
+    reader = pd.read_csv(base, usecols=usecols, chunksize=5_000_000, parse_dates=["DlyCalDt"], low_memory=False)
+    for ch in reader:
+        ch = ch.rename(columns={"PERMNO": "permno", "DlyCalDt": "date", "Ticker": "ticker"})
+        ch["ticker"] = ch["ticker"].astype(str).str.strip().str.upper()
+        ch["ticker_norm"] = ch["ticker"].str.replace(r"\.[A-Z]+$", "", regex=True).str.replace(r"\^.*$", "", regex=True)
+        accumulated.append(ch[["permno", "ticker_norm", "date"]].drop_duplicates(subset=["permno", "ticker_norm"], keep="last"))
+    chunk = pd.concat(accumulated, ignore_index=True)
+    bridge = chunk.drop_duplicates(subset=["permno", "ticker_norm"], keep="last").rename(columns={"ticker_norm": "ticker"})
     return bridge

@@ -2,6 +2,8 @@
 
 Syllabus/underreaction: momentum (skip last month to limit reversal), profitability proxy,
 excess returns vs market. See docs/RESEARCH_NOTES.md.
+
+Expects input sorted by [permno, date] — build_feature_panel pre-sorts once.
 """
 from typing import List
 
@@ -19,7 +21,7 @@ def add_momentum_skip_month(
 ) -> pd.DataFrame:
     """Momentum from t-12m to t-1m (skip last month). Reduces short-term reversal (Jegadeesh).
     Standard in literature and underreaction lecture: Sit = r(t-12,t-2)."""
-    df = df.sort_values([permno_col, "date"]).copy()
+    df = df.copy()
     # At date t we want cumulative return from t-252 to t-21 (skip last ~1 month)
     def _mom_skip(x: pd.Series) -> pd.Series:
         r = (1 + x).cumprod()
@@ -27,7 +29,7 @@ def add_momentum_skip_month(
         out = r.shift(skip_days) / r.shift(skip_days + long_window) - 1
         out = out.shift(1)  # no lookahead
         return out
-    df["mom_12m_skip1m"] = df.groupby(permno_col)[ret_col].transform(_mom_skip)
+    df["mom_12m_skip1m"] = df.groupby(permno_col, sort=False)[ret_col].transform(_mom_skip)
     return df
 
 
@@ -40,13 +42,17 @@ def add_momentum_features(
     permno_col: str = "permno",
 ) -> pd.DataFrame:
     """Add cumulative return over rolling windows (1m, 3m, 6m, 12m). Past data only."""
-    df = df.sort_values([permno_col, date_col]).copy()
+    df = df.copy()
+    # Cache groupby once; reuse across all windows.
+    # log-sum trick: expm1(sum(log1p(r))) == prod(1+r) - 1, fully vectorized — no Python callbacks.
+    # shift(1) inside transform is group-aware: first row of each permno → NaN (no lookahead).
+    grouped = df.groupby(permno_col, sort=False)[ret_col]
     for w in windows:
-        df[f"ret_{w}d"] = df.groupby(permno_col)[ret_col].transform(
-            lambda x: x.rolling(w, min_periods=1).apply(lambda y: (1 + y).prod() - 1 if len(y) >= 1 else np.nan)
-        )
-        # Shift so we use only past returns (no same-day lookahead)
-        df[f"ret_{w}d"] = df.groupby(permno_col)[f"ret_{w}d"].shift(1)
+        def _cumret(x, w=w):
+            # ret=-1 (delisted) gives log1p(-1)=-inf → expm1(-inf)=-1 (correct); suppress warning.
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return np.expm1(np.log1p(x).rolling(w, min_periods=1).sum()).shift(1)
+        df[f"ret_{w}d"] = grouped.transform(_cumret)
     return df
 
 
@@ -58,10 +64,11 @@ def add_volatility_features(
     permno_col: str = "permno",
 ) -> pd.DataFrame:
     """Rolling standard deviation of returns."""
-    df = df.sort_values([permno_col, "date"]).copy()
+    df = df.copy()
+    grouped = df.groupby(permno_col, sort=False)[ret_col]
     for w in windows:
-        df[f"vol_{w}d"] = df.groupby(permno_col)[ret_col].transform(
-            lambda x: x.rolling(w, min_periods=min(5, w)).std()
+        df[f"vol_{w}d"] = grouped.transform(
+            lambda x, w=w: x.rolling(w, min_periods=min(5, w)).std()
         ).shift(1)
     return df
 
@@ -75,17 +82,19 @@ def add_liquidity_features(
     windows: List[int] = [21],
 ) -> pd.DataFrame:
     """Rolling average volume; turnover = volume / (market_cap/1e6) as liquidity proxy if cap available."""
-    df = df.sort_values([permno_col, "date"]).copy()
+    df = df.copy()
     if cap_col in df.columns and volume_col in df.columns:
         df["turnover"] = (df[volume_col] / (df[cap_col].replace(0, np.nan) / 1e6)).replace(np.inf, np.nan)
     else:
         df["turnover"] = np.nan
+    # Cache groupby once; reuse for both turnover and volume columns.
+    grouped = df.groupby(permno_col, sort=False)
     for w in windows:
-        df[f"turnover_avg_{w}d"] = df.groupby(permno_col)["turnover"].transform(
-            lambda x: x.rolling(w, min_periods=1).mean()
+        df[f"turnover_avg_{w}d"] = grouped["turnover"].transform(
+            lambda x, w=w: x.rolling(w, min_periods=1).mean()
         ).shift(1)
-        df[f"volume_avg_{w}d"] = df.groupby(permno_col)[volume_col].transform(
-            lambda x: x.rolling(w, min_periods=1).mean()
+        df[f"volume_avg_{w}d"] = grouped[volume_col].transform(
+            lambda x, w=w: x.rolling(w, min_periods=1).mean()
         ).shift(1)
     return df
 
@@ -101,11 +110,12 @@ def add_abnormal_performance(
     """Excess return vs market over rolling windows (sector/market relative)."""
     if market_ret_col not in df.columns:
         return df
-    df = df.sort_values([permno_col, "date"]).copy()
+    df = df.copy()
     df["excess_ret"] = df[ret_col] - df[market_ret_col]
+    grouped = df.groupby(permno_col, sort=False)["excess_ret"]
     for w in windows:
-        df[f"excess_ret_{w}d"] = df.groupby(permno_col)["excess_ret"].transform(
-            lambda x: x.rolling(w, min_periods=1).sum()
+        df[f"excess_ret_{w}d"] = grouped.transform(
+            lambda x, w=w: x.rolling(w, min_periods=1).sum()
         ).shift(1)
     return df
 
@@ -119,12 +129,10 @@ def add_quality_proxy(
 ) -> pd.DataFrame:
     """Profitability/quality proxy: return / volatility (Sharpe-like). No accounting data.
     Underreaction: high profitability (ROA/ROE) predicts returns; we proxy with past return/vol."""
-    df = df.sort_values([permno_col, "date"]).copy()
-    vol = df.groupby(permno_col)[ret_col].transform(
-        lambda x: x.rolling(vol_window, min_periods=21).std()
-    ).shift(1)
-    ret_ann = df.groupby(permno_col)[ret_col].transform(
-        lambda x: x.rolling(252, min_periods=63).sum()
-    ).shift(1)
+    df = df.copy()
+    # Cache groupby once for both transforms on the same column.
+    grouped = df.groupby(permno_col, sort=False)[ret_col]
+    vol = grouped.transform(lambda x: x.rolling(vol_window, min_periods=21).std()).shift(1)
+    ret_ann = grouped.transform(lambda x: x.rolling(252, min_periods=63).sum()).shift(1)
     df["quality_proxy"] = (ret_ann / vol.replace(0, np.nan)).replace(np.inf, np.nan)
     return df

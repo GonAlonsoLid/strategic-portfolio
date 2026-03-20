@@ -19,8 +19,9 @@ from src.features.rolling_features import (
 def build_market_cap_rank(df: pd.DataFrame, *, date_col: str = "date", cap_col: str = "market_cap", permno_col: str = "permno") -> pd.DataFrame:
     """Cross-sectional rank and percentile of market cap per date."""
     df = df.copy()
-    df["market_cap_rank"] = df.groupby(date_col)[cap_col].rank(ascending=False, method="first")
-    df["size_percentile"] = df.groupby(date_col)[cap_col].rank(pct=True, method="first")
+    grouped = df.groupby(date_col, sort=False)[cap_col]
+    df["market_cap_rank"] = grouped.rank(ascending=False, method="first")
+    df["size_percentile"] = grouped.rank(pct=True, method="first")
     return df
 
 
@@ -33,13 +34,12 @@ def build_joiner_label(
     is_sp500_col: str = "is_sp500",
 ) -> pd.Series:
     """Label = 1 if firm enters S&P 500 in next forward_days trading days, else 0."""
-    panel = panel.sort_values([permno_col, date_col]).copy()
+    # Expects input sorted by [permno, date] — build_feature_panel pre-sorts once.
     # Reverse-roll-reverse within each permno to get a true forward-looking max.
     # At day t: max of is_sp500 over [t+1, t+forward_days].
     future_max = (
         panel.groupby(permno_col)[is_sp500_col]
-        .transform(lambda x: x.iloc[::-1].rolling(forward_days, min_periods=1).max().iloc[::-1])
-        .shift(-1)
+        .transform(lambda x: x.iloc[::-1].rolling(forward_days, min_periods=1).max().iloc[::-1].shift(-1))
     )
     label = ((panel[is_sp500_col] == False) & (future_max == True)).astype(int)
     return label
@@ -54,13 +54,12 @@ def build_leaver_label(
     is_sp500_col: str = "is_sp500",
 ) -> pd.Series:
     """Label = 1 if firm exits S&P 500 in next forward_days trading days, else 0."""
-    panel = panel.sort_values([permno_col, date_col]).copy()
+    # Expects input sorted by [permno, date] — build_feature_panel pre-sorts once.
     # Reverse-roll-reverse within each permno to get a true forward-looking min.
     # At day t: min of is_sp500 over [t+1, t+forward_days].
     future_min = (
         panel.groupby(permno_col)[is_sp500_col]
-        .transform(lambda x: x.iloc[::-1].rolling(forward_days, min_periods=1).min().iloc[::-1])
-        .shift(-1)
+        .transform(lambda x: x.iloc[::-1].rolling(forward_days, min_periods=1).min().iloc[::-1].shift(-1))
     )
     label = ((panel[is_sp500_col] == True) & (future_min == False)).astype(int)
     return label
@@ -81,18 +80,20 @@ def add_forward_returns(
     """
     if horizons is None:
         horizons = [1, 5, 21, 63]
-    panel = panel.sort_values([permno_col, date_col]).copy()
+    panel = panel.copy()
+    # Cache groupby once; log-sum trick: expm1(sum(log1p(r))) == prod(1+r) - 1, fully vectorized.
+    grouped = panel.groupby(permno_col, sort=False)[ret_col]
     for h in horizons:
         col_name = f"fwd_ret_{h}d"
         if h == 1:
             # Forward 1-day return = next day's return
-            panel[col_name] = panel.groupby(permno_col)[ret_col].shift(-1)
+            panel[col_name] = grouped.shift(-1)
         else:
             # Forward h-day cumulative return = product of (1+ret) over next h days, minus 1
-            panel[col_name] = (
-                panel.groupby(permno_col)[ret_col]
-                .transform(lambda x: (1 + x).rolling(h).apply(lambda y: y.prod() - 1, raw=True).shift(-h))
-            )
+            def _fwd_cumret(x, h=h):
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    return np.expm1(np.log1p(x).rolling(h).sum()).shift(-h)
+            panel[col_name] = grouped.transform(_fwd_cumret)
     return panel
 
 
@@ -111,10 +112,17 @@ def build_feature_panel(
     label_days = feat_cfg.get("label_forward_trading_days", 63)
     min_hist = feat_cfg.get("min_history_days", min_history_days)
 
+    # Sort once here — all sub-functions skip internal sorts and trust this order.
+    panel = panel.sort_values(["permno", "date"]).copy()
+
+    # Downcast float64 → float32: halves peak memory (~26 GB → ~13 GB) with no meaningful
+    # loss of precision for financial returns or tree-based model accuracy.
+    float_cols = panel.select_dtypes("float64").columns.tolist()
+    panel[float_cols] = panel[float_cols].astype("float32")
+
     # Ensure market return for abnormal performance
     if "market_ret" not in panel.columns:
-        panel = panel.copy()
-        panel["market_ret"] = panel.groupby("date")["ret"].transform("mean")
+        panel["market_ret"] = panel.groupby("date", sort=False)["ret"].transform("mean")
 
     panel = add_momentum_features(panel, momentum_w)
     panel = add_momentum_skip_month(panel, long_window=252, skip_days=21)
