@@ -132,7 +132,7 @@ def build_feature_panel(
     panel = add_quality_proxy(panel, vol_window=63)
     panel = build_market_cap_rank(panel)
 
-    # Forward returns for IC computation (MODEL-02 IC decay)
+    # Forward returns for information coefficient (IC) computation
     panel = add_forward_returns(panel, horizons=[1, 5, 21, 63])
 
     panel["label_join"] = build_joiner_label(panel, forward_days=label_days)

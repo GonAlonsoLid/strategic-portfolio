@@ -54,7 +54,7 @@ def compute_subperiod_metrics(
     *,
     periods_per_year: int = 252,
 ) -> List[Dict[str, float]]:
-    """Rolling subperiod stats (e.g. 3-year Sharpe) for regime/stability (syllabus)."""
+    """Rolling subperiod stats (e.g. 3-year Sharpe) for regime stability analysis."""
     ret = returns.dropna()
     if ret.empty or len(ret) < max(60, int(periods_per_year * window_years * 0.5)):
         return []

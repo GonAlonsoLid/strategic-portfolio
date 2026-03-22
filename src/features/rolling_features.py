@@ -1,7 +1,8 @@
 """Rolling-window features: momentum, volatility, liquidity (no lookahead).
 
-Syllabus/underreaction: momentum (skip last month to limit reversal), profitability proxy,
-excess returns vs market. See docs/RESEARCH_NOTES.md.
+Features motivated by underreaction hypothesis: momentum (skip last month to limit
+short-term reversal, Jegadeesh & Titman 1993), profitability proxy, excess returns
+vs market-cap-weighted benchmark.
 
 Expects input sorted by [permno, date] — build_feature_panel pre-sorts once.
 """

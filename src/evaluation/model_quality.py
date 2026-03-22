@@ -118,7 +118,7 @@ def build_model_comparison_table(
     ic_per_model: dict[str, float],
     icir_per_model: dict[str, float],
 ) -> pd.DataFrame:
-    """Build MODEL-05 comparison table: AUC, Brier, OOS accuracy, IC, ICIR per model.
+    """Build model comparison table: AUC, Brier, OOS accuracy, IC, ICIR per model.
 
     Args:
         metrics_df: Per-fold metrics with columns [model, fold, roc_auc, brier_score, oos_accuracy, ...].

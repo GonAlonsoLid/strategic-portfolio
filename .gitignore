@@ -60,3 +60,13 @@ htmlcov/
 .env.local
 .env.*.local
 data/raw/daily.csv.gz
+
+# Planning and internal tooling (local only)
+.planning/
+docs/superpowers/
+
+# PDF documents (local reference)
+*.pdf
+
+# Trained model artifacts
+data/processed/*.joblib

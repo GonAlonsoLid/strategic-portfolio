@@ -27,13 +27,13 @@ def run_model_quality_analysis(
     figures_dir: Path,
     tables_dir: Path,
 ) -> None:
-    """Run Phase 1 model quality analyses: IC, ICIR, SHAP, comparison table.
+    """Run model quality analyses: IC, ICIR, SHAP importance, comparison table.
 
     Produces:
-        results/tables/model_comparison.csv  (MODEL-05)
-        results/figures/ic_decay.png         (MODEL-02)
+        results/tables/model_comparison.csv
+        results/figures/ic_decay.png
         results/tables/ic_decay.csv
-        results/figures/shap_importance.png  (MODEL-04)
+        results/figures/shap_importance.png
         results/tables/shap_importance.csv
     """
     import joblib
@@ -59,7 +59,7 @@ def run_model_quality_analysis(
     model_names = [c.replace("p_join_", "") for c in prob_cols]
     print(f"Models found: {model_names}")
 
-    # MODEL-01 / MODEL-03: IC and ICIR per model (21-day forward return)
+    # IC and ICIR per model (21-day forward return)
     ic_per_model: dict[str, float] = {}
     icir_per_model: dict[str, float] = {}
     for model_name, prob_col in zip(model_names, prob_cols):
@@ -78,7 +78,7 @@ def run_model_quality_analysis(
         best_model_name = metrics_df.groupby("model")["roc_auc"].mean().idxmax()
     print(f"Best model (by ICIR): {best_model_name}")
 
-    # MODEL-02: IC decay for best model
+    # IC decay across holding horizons for best model
     best_prob_col = f"p_join_{best_model_name}"
     ic_decay = compute_ic_decay(scores, fwd_returns, best_prob_col, horizons=[1, 5, 21, 63])
     print(f"IC decay for {best_model_name}: {ic_decay}")
@@ -87,7 +87,7 @@ def run_model_quality_analysis(
     ic_decay_df.to_csv(tables_dir / "ic_decay.csv", index=False)
     print("Saved results/figures/ic_decay.png and results/tables/ic_decay.csv")
 
-    # MODEL-04: SHAP importance for best model
+    # SHAP feature importance for best model
     best_model_path = processed / "best_model.joblib"
     best_features_path = processed / "best_model_features.joblib"
     if best_model_path.exists() and best_features_path.exists():
@@ -107,13 +107,13 @@ def run_model_quality_analysis(
     else:
         print(f"WARNING: best_model.joblib not found at {best_model_path}; skipping SHAP.")
 
-    # MODEL-05: Model comparison table
+    # Aggregate model comparison table
     comparison = build_model_comparison_table(metrics_df, ic_per_model, icir_per_model)
     comparison.to_csv(tables_dir / "model_comparison.csv", index=False)
     print(f"Model comparison table:\n{comparison.to_string()}")
     print("Saved results/tables/model_comparison.csv")
 
-    print("\n=== Phase 1 Model Quality Analysis Complete ===")
+    print("\n=== Model Quality Analysis Complete ===")
 
 
 def main() -> None:
@@ -204,11 +204,11 @@ def main() -> None:
     else:
         print("WARNING: No metrics or scores produced; skipping best model save.")
 
-    # Run Phase 1 model quality analysis (IC, ICIR, SHAP, comparison table)
+    # Run model quality analysis (IC, ICIR, SHAP, comparison table)
     if not args.skip_quality and not metrics_df.empty and len(scores_df) > 0:
         figures_dir = base / "results" / "figures"
         tables_dir = base / "results" / "tables"
-        print("\nRunning Phase 1 model quality analysis...")
+        print("\nRunning model quality analysis...")
         run_model_quality_analysis(
             scores=scores_df,
             features_join=features_join,
