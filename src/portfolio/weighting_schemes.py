@@ -72,3 +72,67 @@ def risk_parity_weight(
     if w.sum() > 0:
         w = w / w.sum() * gross_target
     return w
+
+
+def threshold_weight(
+    scores: pd.Series,
+    prob_threshold: float = 0.15,
+    *,
+    gross_target: float = 1.0,
+    weighting: str = "equal",
+) -> pd.Series:
+    """Select stocks exceeding absolute probability threshold.
+
+    Unlike quantile-based selection, this only picks stocks the model
+    is genuinely confident about (p > threshold), avoiding the problem
+    of selecting hundreds of near-zero-probability stocks.
+
+    Args:
+        scores: Predicted probabilities per stock.
+        prob_threshold: Minimum probability to include (absolute, not quantile).
+        gross_target: Target gross exposure for this leg.
+        weighting: 'equal' or 'probability' (prop to score).
+    """
+    mask = scores >= prob_threshold
+    if mask.sum() == 0:
+        return pd.Series(0.0, index=scores.index)
+    if weighting == "probability":
+        w = (scores * mask).fillna(0)
+    else:
+        w = mask.astype(float)
+    if w.sum() > 0:
+        w = w / w.sum() * gross_target
+    return w
+
+
+def topn_weight(
+    scores: pd.Series,
+    n: int = 20,
+    *,
+    gross_target: float = 1.0,
+    weighting: str = "equal",
+) -> pd.Series:
+    """Select top N stocks by score, independent of probability calibration.
+
+    This is the standard quant approach: rank by signal, take the top N.
+    Calibration-independent — works even when model probabilities are
+    distorted by scale_pos_weight or class imbalance corrections.
+
+    Args:
+        scores: Predicted probabilities (or any signal) per stock.
+        n: Number of top stocks to select.
+        gross_target: Target gross exposure for this leg.
+        weighting: 'equal' or 'probability' (prop to score).
+    """
+    if len(scores) == 0:
+        return pd.Series(dtype=float)
+    n = min(n, len(scores))
+    top_idx = scores.nlargest(n).index
+    w = pd.Series(0.0, index=scores.index)
+    if weighting == "probability":
+        w[top_idx] = scores[top_idx]
+    else:
+        w[top_idx] = 1.0
+    if w.sum() > 0:
+        w = w / w.sum() * gross_target
+    return w

@@ -50,8 +50,15 @@ class Backtester:
         target_weights["date"] = pd.to_datetime(target_weights["date"]).dt.normalize()
         rebal_dates = sorted(target_weights["date"].unique())
         all_dates = pd.DatetimeIndex(pd.to_datetime(self.panel[self.date_col].unique())).sort_values()
-        # Pivot to (rebal_date x permno), then reindex to all_dates and ffill
+        # Pivot to (rebal_date x permno), then reindex to all_dates and ffill.
+        # At each rebalance date, unmentioned stocks must be 0 (closed),
+        # not NaN (which ffill would propagate from previous rebalance).
         w_pivot = target_weights.pivot_table(index="date", columns="permno", values="weight", aggfunc="first")
+        # Fill NaN with 0 at rebalance dates so positions are explicitly closed
+        rebal_set = set(rebal_dates)
+        for d in w_pivot.index:
+            if d in rebal_set:
+                w_pivot.loc[d] = w_pivot.loc[d].fillna(0)
         w_daily = w_pivot.reindex(all_dates).ffill().fillna(0)
 
         # Portfolio return and turnover per day

@@ -143,6 +143,76 @@ def plot_factor_loadings(
     plt.close(fig)
 
 
+def plot_robustness_heatmap(
+    robustness_df: pd.DataFrame,
+    metric: str = "sharpe_ratio",
+    *,
+    row_col: str = "holding_period_months",
+    col_col: str = "prob_threshold",
+    title: str | None = None,
+    save_path: str | Path | None = None,
+) -> None:
+    """Heatmap of a metric over the robustness grid (holding period x threshold)."""
+    set_plot_style()
+    pivot = robustness_df.pivot_table(index=row_col, columns=col_col, values=metric)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.heatmap(pivot, annot=True, fmt=".3f", cmap="RdYlGn", center=0, ax=ax,
+                linewidths=0.5, cbar_kws={"label": metric})
+    ax.set_title(title or f"Robustness: {metric}")
+    ax.set_ylabel("Holding period (months)")
+    ax.set_xlabel("Probability threshold")
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_turnover(
+    turnover: pd.Series,
+    *,
+    title: str = "Portfolio turnover",
+    save_path: str | Path | None = None,
+) -> None:
+    """Plot daily turnover over time."""
+    set_plot_style()
+    fig, ax = plt.subplots()
+    rolling = turnover.rolling(21).mean()
+    ax.plot(rolling.index, rolling.values, linewidth=1.5, alpha=0.8)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Daily turnover (21d avg)")
+    ax.set_title(title)
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_exposure(
+    gross_exposure: pd.Series,
+    net_exposure: pd.Series,
+    *,
+    title: str = "Portfolio exposure",
+    save_path: str | Path | None = None,
+) -> None:
+    """Plot gross and net exposure over time."""
+    set_plot_style()
+    fig, ax = plt.subplots()
+    ax.plot(gross_exposure.index, gross_exposure.values, label="Gross", linewidth=1.5)
+    ax.plot(net_exposure.index, net_exposure.values, label="Net", linewidth=1.5, alpha=0.7)
+    ax.axhline(0, color="gray", linestyle="--", alpha=0.5)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Exposure")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_feature_importance(
     importance: pd.Series,
     *,

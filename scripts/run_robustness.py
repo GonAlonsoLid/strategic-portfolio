@@ -1,4 +1,6 @@
-"""Robustness sweep: backtest over holding-period × threshold combinations.
+"""Robustness sweep: backtest over holding-period x probability-threshold grid.
+
+Uses threshold-based portfolio construction (absolute probability gating).
 
 Requires pre-computed files on disk (run run_backtest.py first):
   data/interim/daily_panel.parquet
@@ -18,13 +20,14 @@ import numpy as np
 
 from src.utils.config_loader import load_config
 from src.data.load_data import load_config_paths
-from src.portfolio.portfolio_construction import build_long_short_portfolio
+from src.portfolio.portfolio_construction import build_topn_portfolio
 from src.backtesting.backtester import Backtester
 from src.evaluation.performance_metrics import compute_performance_metrics
+from src.utils.plotting import plot_robustness_heatmap
 
 
 _DEFAULT_HOLDING_PERIODS = [1, 3, 6, 12]   # months
-_DEFAULT_THRESHOLDS = [0.05, 0.10, 0.20]
+_DEFAULT_N_POSITIONS = [5, 10, 20, 30, 50]
 
 
 def _make_rebalance_dates(panel: pd.DataFrame, holding_period_months: int) -> pd.Index:
@@ -42,44 +45,50 @@ def run_sweep(
     leave_scores: pd.DataFrame,
     *,
     holding_periods: list | None = None,
-    thresholds: list | None = None,
+    n_positions_list: list | None = None,
     config: dict | None = None,
     transaction_cost_bps: float = 10,
+    model_name: str = "xgboost",
 ) -> pd.DataFrame:
-    """Run holding-period × threshold grid. Always returns exactly len(hp) × len(thr) rows."""
+    """Run holding-period x top-N grid with top-N portfolios."""
     holding_periods = holding_periods or _DEFAULT_HOLDING_PERIODS
-    thresholds = thresholds or _DEFAULT_THRESHOLDS
+    n_positions_list = n_positions_list or _DEFAULT_N_POSITIONS
     bt = Backtester(panel, transaction_cost_bps=transaction_cost_bps)
     rows = []
     for hp in holding_periods:
         rebalance_dates = _make_rebalance_dates(panel, hp)
-        for thr in thresholds:
-            weights = build_long_short_portfolio(
+        for n in n_positions_list:
+            weights = build_topn_portfolio(
                 join_scores, leave_scores, panel,
-                config=config,
                 rebalance_dates=rebalance_dates,
-                top_decile=thr,
+                n_long=n, n_short=n,
+                weighting="equal",
+                model_name=model_name,
             )
             if weights.empty:
                 rows.append({
-                    "holding_period_months": hp, "top_decile": thr,
+                    "holding_period_months": hp, "n_positions": n,
                     "annual_return": np.nan, "annual_volatility": np.nan,
-                    "sharpe_ratio": np.nan, "max_drawdown": np.nan, "turnover": np.nan,
+                    "sharpe_ratio": np.nan, "sortino_ratio": np.nan,
+                    "max_drawdown": np.nan, "turnover": np.nan,
+                    "n_positions_avg": 0,
                 })
                 continue
             result = bt.run_backtest(weights)
             ret = result["returns"]
             m = compute_performance_metrics(ret)
-            # turnover is a Series from the backtester; take mean daily turnover
             to = float(result["turnover"].mean())
+            n_pos = weights.groupby("date").size().mean()
             rows.append({
                 "holding_period_months": hp,
-                "top_decile": thr,
+                "n_positions": n,
                 "annual_return": m["annual_return"],
                 "annual_volatility": m["annual_volatility"],
                 "sharpe_ratio": m["sharpe_ratio"],
+                "sortino_ratio": m["sortino_ratio"],
                 "max_drawdown": m["max_drawdown"],
                 "turnover": to,
+                "n_positions_avg": round(n_pos, 1),
             })
     return pd.DataFrame(rows)
 
@@ -91,7 +100,9 @@ def main() -> None:
     interim = base / paths.get("interim", "data/interim")
     processed = base / paths.get("processed", "data/processed")
     out_tab = base / paths.get("results_tables", "results/tables")
+    out_fig = base / paths.get("results_figures", "results/figures")
     out_tab.mkdir(parents=True, exist_ok=True)
+    out_fig.mkdir(parents=True, exist_ok=True)
 
     # Pre-flight checks
     required = {
@@ -113,16 +124,30 @@ def main() -> None:
     if "market_ret" not in panel.columns:
         panel["market_ret"] = panel.groupby("date")["ret"].transform("mean")
 
-    n_combos = len(_DEFAULT_HOLDING_PERIODS) * len(_DEFAULT_THRESHOLDS)
-    print(f"Running robustness sweep: {len(_DEFAULT_HOLDING_PERIODS)} holding periods × "
-          f"{len(_DEFAULT_THRESHOLDS)} thresholds = {n_combos} combinations...")
+    # Auto-detect model name
+    p_cols = [c for c in join_scores.columns if c.startswith("p_join_")]
+    model_name = p_cols[0].replace("p_join_", "") if p_cols else "xgboost"
 
-    result = run_sweep(panel, join_scores, leave_scores, config=cfg)
+    n_combos = len(_DEFAULT_HOLDING_PERIODS) * len(_DEFAULT_N_POSITIONS)
+    print(f"Running robustness sweep: {len(_DEFAULT_HOLDING_PERIODS)} holding periods x "
+          f"{len(_DEFAULT_N_POSITIONS)} top-N = {n_combos} combinations...")
+
+    result = run_sweep(panel, join_scores, leave_scores, config=cfg, model_name=model_name)
 
     out_path = out_tab / "robustness_holding_periods.csv"
     result.to_csv(out_path, index=False)
     print(f"\nRobustness sweep complete. Saved to {out_path}")
     print(result.to_string(index=False))
+
+    # Generate heatmaps for key metrics
+    for metric in ["sharpe_ratio", "annual_return", "max_drawdown"]:
+        plot_robustness_heatmap(
+            result, metric=metric,
+            row_col="holding_period_months", col_col="n_positions",
+            title=f"Robustness: {metric} (holding period x top-N)",
+            save_path=out_fig / f"robustness_heatmap_{metric}.png",
+        )
+    print("Heatmaps saved to results/figures/")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 from src.utils.config_loader import load_config, get_section
-from src.portfolio.weighting_schemes import equal_weight, probability_weight, risk_parity_weight, rank_weight
+from src.portfolio.weighting_schemes import equal_weight, probability_weight, risk_parity_weight, rank_weight, threshold_weight, topn_weight
 
 
 def build_long_short_portfolio(
@@ -45,7 +45,7 @@ def build_long_short_portfolio(
         return pd.DataFrame(columns=["date", "permno", "weight"])
 
     if rebalance_dates is None:
-        ud = pd.to_datetime(join_scores["date"].unique()).sort_values()
+        ud = pd.DatetimeIndex(pd.to_datetime(join_scores["date"].unique())).sort_values()
         df_u = pd.DataFrame({"date": ud})
         df_u["ym"] = df_u["date"].dt.to_period("M")
         rebalance_dates = df_u.groupby("ym")["date"].first().values
@@ -68,6 +68,112 @@ def build_long_short_portfolio(
         else:
             w_long = equal_weight(j, top_decile, gross_target=gross_exposure / 2)
             w_short = -equal_weight(lv, top_decile, gross_target=gross_exposure / 2)
+        for permno, w in w_long.items():
+            if w != 0:
+                rows.append({"date": rb_date, "permno": permno, "weight": w})
+        for permno, w in w_short.items():
+            if w != 0:
+                rows.append({"date": rb_date, "permno": permno, "weight": w})
+
+    return pd.DataFrame(rows)
+
+
+def build_threshold_portfolio(
+    join_scores: pd.DataFrame,
+    leave_scores: pd.DataFrame,
+    panel: pd.DataFrame,
+    *,
+    rebalance_dates: Optional[pd.DatetimeIndex] = None,
+    prob_threshold_join: float = 0.15,
+    prob_threshold_leave: float = 0.15,
+    weighting: str = "equal",
+    gross_exposure: float = 2.0,
+    model_name: str = "xgboost",
+) -> pd.DataFrame:
+    """Build long-short portfolio using absolute probability thresholds.
+
+    Instead of selecting the top decile by rank (which includes hundreds
+    of near-zero-probability stocks), only trade stocks where the model
+    assigns probability above a meaningful threshold.
+
+    Long: stocks with p_join > prob_threshold_join
+    Short: stocks with p_leave > prob_threshold_leave
+    """
+    p_join_col = f"p_join_{model_name}"
+    p_leave_col = f"p_leave_{model_name}"
+    if p_join_col not in join_scores.columns:
+        p_join_col = [c for c in join_scores.columns if c.startswith("p_join_")][0] if any(c.startswith("p_join_") for c in join_scores.columns) else None
+    if p_leave_col not in leave_scores.columns:
+        p_leave_col = [c for c in leave_scores.columns if c.startswith("p_leave_")][0] if any(c.startswith("p_leave_") for c in leave_scores.columns) else None
+    if not p_join_col or not p_leave_col:
+        return pd.DataFrame(columns=["date", "permno", "weight"])
+
+    if rebalance_dates is None:
+        ud = pd.DatetimeIndex(pd.to_datetime(join_scores["date"].unique())).sort_values()
+        df_u = pd.DataFrame({"date": ud})
+        df_u["ym"] = df_u["date"].dt.to_period("M")
+        rebalance_dates = df_u.groupby("ym")["date"].first().values
+
+    rows = []
+    for rb_date in rebalance_dates:
+        j = join_scores[join_scores["date"] == rb_date].set_index("permno")[p_join_col]
+        lv = leave_scores[leave_scores["date"] == rb_date].set_index("permno")[p_leave_col]
+
+        w_long = threshold_weight(j, prob_threshold_join,
+                                  gross_target=gross_exposure / 2, weighting=weighting)
+        w_short = -threshold_weight(lv, prob_threshold_leave,
+                                    gross_target=gross_exposure / 2, weighting=weighting)
+
+        for permno, w in w_long.items():
+            if w != 0:
+                rows.append({"date": rb_date, "permno": permno, "weight": w})
+        for permno, w in w_short.items():
+            if w != 0:
+                rows.append({"date": rb_date, "permno": permno, "weight": w})
+
+    return pd.DataFrame(rows)
+
+
+def build_topn_portfolio(
+    join_scores: pd.DataFrame,
+    leave_scores: pd.DataFrame,
+    panel: pd.DataFrame,
+    *,
+    rebalance_dates: Optional[pd.DatetimeIndex] = None,
+    n_long: int = 20,
+    n_short: int = 20,
+    weighting: str = "equal",
+    gross_exposure: float = 2.0,
+    model_name: str = "xgboost",
+) -> pd.DataFrame:
+    """Build long-short portfolio selecting top N stocks by probability.
+
+    Calibration-independent: uses rank ordering, not absolute probability.
+    With ~20 actual joins/year, n_long=20 concentrates on highest-conviction names.
+    """
+    p_join_col = f"p_join_{model_name}"
+    p_leave_col = f"p_leave_{model_name}"
+    if p_join_col not in join_scores.columns:
+        p_join_col = [c for c in join_scores.columns if c.startswith("p_join_")][0] if any(c.startswith("p_join_") for c in join_scores.columns) else None
+    if p_leave_col not in leave_scores.columns:
+        p_leave_col = [c for c in leave_scores.columns if c.startswith("p_leave_")][0] if any(c.startswith("p_leave_") for c in leave_scores.columns) else None
+    if not p_join_col or not p_leave_col:
+        return pd.DataFrame(columns=["date", "permno", "weight"])
+
+    if rebalance_dates is None:
+        ud = pd.DatetimeIndex(pd.to_datetime(join_scores["date"].unique())).sort_values()
+        df_u = pd.DataFrame({"date": ud})
+        df_u["ym"] = df_u["date"].dt.to_period("M")
+        rebalance_dates = df_u.groupby("ym")["date"].first().values
+
+    rows = []
+    for rb_date in rebalance_dates:
+        j = join_scores[join_scores["date"] == rb_date].set_index("permno")[p_join_col]
+        lv = leave_scores[leave_scores["date"] == rb_date].set_index("permno")[p_leave_col]
+
+        w_long = topn_weight(j, n_long, gross_target=gross_exposure / 2, weighting=weighting)
+        w_short = -topn_weight(lv, n_short, gross_target=gross_exposure / 2, weighting=weighting)
+
         for permno, w in w_long.items():
             if w != 0:
                 rows.append({"date": rb_date, "permno": permno, "weight": w})
