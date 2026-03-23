@@ -2,11 +2,12 @@
 
 Generates all deliverables required by Project 1.pdf:
 - Omniscient benchmark (perfect foresight)
-- Predictive strategies (quantile-based and threshold-based)
+- Predictive strategies (quantile, top-N, composite, vol-scaled, momentum-filtered, asymmetric)
 - Performance comparison tables
-- All figures (cumulative returns, drawdowns, turnover, exposure)
+- All figures (cumulative returns, drawdowns, turnover, exposure, annual returns, rolling metrics)
 - Factor attribution
 - Subperiod analysis
+- Daily return series (CSV) for report generation
 """
 import sys
 from pathlib import Path
@@ -22,6 +23,9 @@ from src.portfolio.portfolio_construction import (
     build_perfect_foresight_portfolio,
     build_threshold_portfolio,
     build_topn_portfolio,
+    build_composite_portfolio,
+    build_volscaled_portfolio,
+    build_momentum_filtered_portfolio,
 )
 from src.backtesting.backtester import Backtester
 from src.evaluation.performance_metrics import (
@@ -37,6 +41,8 @@ from src.utils.plotting import (
     plot_strategy_comparison,
     plot_turnover,
     plot_exposure,
+    plot_annual_returns,
+    plot_rolling_metrics,
 )
 
 
@@ -66,7 +72,7 @@ def _detect_model_name(join_scores: pd.DataFrame) -> str:
 def _run_strategy(bt: Backtester, weights: pd.DataFrame, name: str) -> dict:
     """Run backtest and compute full metrics for a strategy."""
     if weights.empty:
-        print(f"  WARNING: {name} portfolio is empty — skipping.")
+        print(f"  WARNING: {name} portfolio is empty -- skipping.")
         return None
     result = bt.run_backtest(weights)
     metrics = compute_performance_metrics(result["returns"])
@@ -119,7 +125,7 @@ def main() -> None:
     )
     quantile_strat = _run_strategy(bt, q_weights, "Predictive (quantile)")
 
-    # ── 3. Predictive strategy: top-N (concentrated, calibration-independent) ──
+    # ── 3. Top-N strategies (symmetric) ──────────────────────────────────
     print("\n3. Building top-N predictive strategies...")
     topn_strategies = []
     for n in [5, 10, 20, 30, 50]:
@@ -135,16 +141,82 @@ def main() -> None:
             if s:
                 topn_strategies.append(s)
 
-    # ── 4. Collect all strategies ────────────────────────────────────────
+    # ── 4. NEW: Composite score strategies ───────────────────────────────
+    print("\n4. Building composite score strategies...")
+    composite_strategies = []
+    for n in [5, 10, 20]:
+        for alpha in [0.25, 0.5, 0.75]:
+            name = f"Composite-{n} (a={alpha})"
+            print(f"  {name}...")
+            cw = build_composite_portfolio(
+                join_scores, leave_scores, panel,
+                n_long=n, n_short=n, alpha=alpha, beta=alpha,
+                weighting="equal", gross_exposure=2.0, model_name=model_name,
+            )
+            s = _run_strategy(bt, cw, name)
+            if s:
+                composite_strategies.append(s)
+
+    # ── 5. NEW: Asymmetric leg strategies ────────────────────────────────
+    print("\n5. Building asymmetric leg strategies...")
+    asym_strategies = []
+    for n_l, n_s in [(5, 20), (5, 30), (10, 30), (10, 50)]:
+        name = f"Asym-{n_l}L/{n_s}S"
+        print(f"  {name}...")
+        aw = build_topn_portfolio(
+            join_scores, leave_scores, panel,
+            n_long=n_l, n_short=n_s,
+            weighting="equal", gross_exposure=2.0, model_name=model_name,
+        )
+        s = _run_strategy(bt, aw, name)
+        if s:
+            asym_strategies.append(s)
+
+    # ── 6. NEW: Vol-scaled strategies ────────────────────────────────────
+    print("\n6. Building vol-scaled strategies...")
+    vol_strategies = []
+    for n in [10, 20]:
+        for gamma in [0.0, 0.3, 0.5]:
+            name = f"VolScaled-{n} (g={gamma})"
+            print(f"  {name}...")
+            vw = build_volscaled_portfolio(
+                join_scores, leave_scores, panel,
+                n_long=n, n_short=n, gamma=gamma,
+                gross_exposure=2.0, model_name=model_name,
+            )
+            s = _run_strategy(bt, vw, name)
+            if s:
+                vol_strategies.append(s)
+
+    # ── 7. NEW: Momentum-filtered strategies ─────────────────────────────
+    print("\n7. Building momentum-filtered strategies...")
+    mom_strategies = []
+    for n in [10, 20]:
+        name = f"MomFilter-{n}"
+        print(f"  {name}...")
+        mw = build_momentum_filtered_portfolio(
+            join_scores, leave_scores, panel,
+            n_long=n, n_short=n, mom_window=21,
+            weighting="equal", gross_exposure=2.0, model_name=model_name,
+        )
+        s = _run_strategy(bt, mw, name)
+        if s:
+            mom_strategies.append(s)
+
+    # ── 8. Collect all strategies ────────────────────────────────────────
     all_strategies = []
     if omni:
         all_strategies.append(omni)
     if quantile_strat:
         all_strategies.append(quantile_strat)
     all_strategies.extend(topn_strategies)
+    all_strategies.extend(composite_strategies)
+    all_strategies.extend(asym_strategies)
+    all_strategies.extend(vol_strategies)
+    all_strategies.extend(mom_strategies)
 
-    # ── 5. Strategy comparison table ─────────────────────────────────────
-    print("\n4. Generating comparison tables...")
+    # ── 9. Strategy comparison table ─────────────────────────────────────
+    print("\n8. Generating comparison tables...")
     comp_rows = [{"strategy": s["name"], **s["metrics"]} for s in all_strategies]
     comp_df = pd.DataFrame(comp_rows)
     comp_df.to_csv(out_tab / "strategy_comparison.csv", index=False)
@@ -155,44 +227,78 @@ def main() -> None:
     if omni:
         pd.DataFrame([omni["metrics"]]).to_csv(out_tab / "backtest_summary_omniscient.csv", index=False)
 
-    # Find best top-N strategy by Sharpe
-    best_thr = max(topn_strategies, key=lambda s: s["metrics"].get("sharpe_ratio", -999)) if topn_strategies else None
-    if best_thr:
-        pd.DataFrame([best_thr["metrics"]]).to_csv(out_tab / "backtest_summary_predictive.csv", index=False)
-        print(f"\n  Best strategy: {best_thr['name']}")
-        print(f"    Sharpe: {best_thr['metrics']['sharpe_ratio']:.3f}")
-        print(f"    Annual return: {best_thr['metrics']['annual_return']:.4f}")
+    # Find best strategy by Sharpe (excluding omniscient)
+    predictive = [s for s in all_strategies if s["name"] != "Omniscient"]
+    best = max(predictive, key=lambda s: s["metrics"].get("sharpe_ratio", -999)) if predictive else None
+    if best:
+        pd.DataFrame([best["metrics"]]).to_csv(out_tab / "backtest_summary_predictive.csv", index=False)
+        print(f"\n  Best strategy: {best['name']}")
+        print(f"    Sharpe: {best['metrics']['sharpe_ratio']:.3f}")
+        print(f"    Annual return: {best['metrics']['annual_return']:.4f}")
 
-    # ── 6. Figures ───────────────────────────────────────────────────────
-    print("\n5. Generating figures...")
+    # ── 10. Save daily returns for all key strategies ────────────────────
+    print("\n9. Saving daily return series...")
+    returns_dir = out_tab / "daily_returns"
+    returns_dir.mkdir(parents=True, exist_ok=True)
+    for s in all_strategies:
+        safe_name = s["name"].replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("=", "")
+        s["result"]["returns"].to_csv(returns_dir / f"{safe_name}.csv", header=True)
 
-    # Cumulative returns comparison (all key strategies)
+    # ── 11. Figures ──────────────────────────────────────────────────────
+    print("\n10. Generating figures...")
+
+    # Identify key strategies for comparison plots
     key_series = {}
     if omni:
         key_series["Omniscient"] = omni["result"]["returns"]
     if quantile_strat:
-        key_series["Predictive (quantile)"] = quantile_strat["result"]["returns"]
-    if best_thr:
-        key_series[best_thr["name"]] = best_thr["result"]["returns"]
+        key_series["Quantile (top 10%)"] = quantile_strat["result"]["returns"]
+    if best:
+        key_series[f"Best: {best['name']}"] = best["result"]["returns"]
+    # Also add best from each new category
+    for cat_name, cat_list in [("composite", composite_strategies),
+                                ("asymmetric", asym_strategies),
+                                ("vol-scaled", vol_strategies),
+                                ("mom-filter", mom_strategies)]:
+        if cat_list:
+            cat_best = max(cat_list, key=lambda s: s["metrics"].get("sharpe_ratio", -999))
+            label = f"Best {cat_name}: {cat_best['name']}"
+            key_series[label] = cat_best["result"]["returns"]
 
     if key_series:
         common_start = max(s.index.min() for s in key_series.values())
         aligned = {k: v[v.index >= common_start] for k, v in key_series.items()}
         plot_strategy_comparison(aligned, save_path=out_fig / "cumulative_returns_comparison.png")
 
-    # Individual plots for best threshold strategy
-    if best_thr:
-        ret_best = best_thr["result"]["returns"]
-        plot_cumulative_returns(ret_best, title=f"Cumulative returns: {best_thr['name']}",
+    # Annual returns bar chart (key strategies)
+    if key_series:
+        plot_annual_returns(
+            {k: v for k, v in aligned.items()},
+            title="Annual returns by year",
+            save_path=out_fig / "annual_returns.png",
+        )
+
+    # Rolling metrics (Sharpe + return)
+    if key_series:
+        plot_rolling_metrics(
+            aligned,
+            title="Rolling 1-year Sharpe ratio and annual return",
+            save_path=out_fig / "rolling_metrics.png",
+        )
+
+    # Individual plots for best strategy
+    if best:
+        ret_best = best["result"]["returns"]
+        plot_cumulative_returns(ret_best, title=f"Cumulative returns: {best['name']}",
                                 save_path=out_fig / "cumulative_returns.png")
-        plot_drawdowns(ret_best, title=f"Drawdown: {best_thr['name']}",
+        plot_drawdowns(ret_best, title=f"Drawdown: {best['name']}",
                        save_path=out_fig / "drawdown.png")
-        plot_turnover(best_thr["result"]["turnover"],
-                      title=f"Turnover: {best_thr['name']}",
+        plot_turnover(best["result"]["turnover"],
+                      title=f"Turnover: {best['name']}",
                       save_path=out_fig / "turnover.png")
-        plot_exposure(best_thr["result"]["gross_exposure"],
-                      best_thr["result"]["net_exposure"],
-                      title=f"Exposure: {best_thr['name']}",
+        plot_exposure(best["result"]["gross_exposure"],
+                      best["result"]["net_exposure"],
+                      title=f"Exposure: {best['name']}",
                       save_path=out_fig / "exposure.png")
 
     # Drawdowns for omniscient
@@ -200,20 +306,20 @@ def main() -> None:
         plot_drawdowns(omni["result"]["returns"], title="Drawdown: Omniscient",
                        save_path=out_fig / "drawdown_omniscient.png")
 
-    # ── 7. Subperiod analysis ────────────────────────────────────────────
-    print("\n6. Subperiod analysis...")
-    if best_thr:
-        subperiod = compute_subperiod_metrics(best_thr["result"]["returns"], window_years=3.0)
+    # ── 12. Subperiod analysis ───────────────────────────────────────────
+    print("\n11. Subperiod analysis...")
+    if best:
+        subperiod = compute_subperiod_metrics(best["result"]["returns"], window_years=3.0)
         if subperiod:
             sub_df = pd.DataFrame(subperiod)
             sub_sampled = sub_df.iloc[::63].tail(20)
             sub_sampled.to_csv(out_tab / "backtest_subperiod_3y.csv", index=False)
 
-    # ── 8. Factor attribution ────────────────────────────────────────────
-    print("\n7. Factor attribution...")
+    # ── 13. Factor attribution ───────────────────────────────────────────
+    print("\n12. Factor attribution...")
     factors = load_factors(config=cfg)
-    if factors is not None and best_thr:
-        fac_res = run_factor_regression(best_thr["result"]["returns"], factors)
+    if factors is not None and best:
+        fac_res = run_factor_regression(best["result"]["returns"], factors)
         pd.DataFrame([fac_res]).to_csv(out_tab / "factor_loadings_predictive.csv", index=False)
         if fac_res.get("betas"):
             plot_factor_loadings(pd.Series(fac_res["betas"]),

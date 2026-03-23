@@ -213,6 +213,86 @@ def plot_exposure(
     plt.close(fig)
 
 
+def plot_annual_returns(
+    returns_dict: dict,
+    *,
+    title: str = "Annual returns by year",
+    save_path: str | Path | None = None,
+) -> None:
+    """Grouped bar chart of annual returns for multiple strategies."""
+    set_plot_style()
+    records = []
+    for label, ret in returns_dict.items():
+        annual = ret.groupby(ret.index.year).apply(lambda x: (1 + x).prod() - 1)
+        for yr, val in annual.items():
+            records.append({"Year": yr, "Strategy": label, "Return": val})
+    df = pd.DataFrame(records)
+    if df.empty:
+        return
+
+    years = sorted(df["Year"].unique())
+    strategies = list(returns_dict.keys())
+    n_strats = len(strategies)
+    bar_width = 0.8 / n_strats
+    fig, ax = plt.subplots(figsize=(max(12, len(years) * 0.8), 6))
+
+    for i, strat in enumerate(strategies):
+        sub = df[df["Strategy"] == strat].set_index("Year")["Return"]
+        positions = [years.index(y) + i * bar_width for y in sub.index]
+        colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in sub.values]
+        ax.bar(positions, sub.values, bar_width * 0.9, label=strat, color=colors, alpha=0.8)
+
+    ax.set_xticks([y + bar_width * (n_strats - 1) / 2 for y in range(len(years))])
+    ax.set_xticklabels(years, rotation=45)
+    ax.axhline(0, color="gray", linestyle="--", alpha=0.5)
+    ax.set_ylabel("Annual return")
+    ax.set_title(title)
+    if n_strats > 1:
+        ax.legend()
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_rolling_metrics(
+    returns_dict: dict,
+    *,
+    window: int = 252,
+    title: str = "Rolling 1-year metrics",
+    save_path: str | Path | None = None,
+) -> None:
+    """2-panel plot: rolling Sharpe and rolling annual return for multiple strategies."""
+    set_plot_style()
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+    for label, ret in returns_dict.items():
+        rolling_mean = ret.rolling(window).mean() * 252
+        rolling_vol = ret.rolling(window).std() * (252 ** 0.5)
+        rolling_sharpe = rolling_mean / rolling_vol
+
+        ax1.plot(rolling_sharpe.index, rolling_sharpe.values, linewidth=1.5, label=label, alpha=0.8)
+        ax2.plot(rolling_mean.index, rolling_mean.values, linewidth=1.5, label=label, alpha=0.8)
+
+    ax1.axhline(0, color="gray", linestyle="--", alpha=0.5)
+    ax1.set_ylabel("Rolling Sharpe (1y)")
+    ax1.set_title(title)
+    ax1.legend(fontsize=9)
+
+    ax2.axhline(0, color="gray", linestyle="--", alpha=0.5)
+    ax2.set_ylabel("Rolling annual return (1y)")
+    ax2.set_xlabel("Date")
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_feature_importance(
     importance: pd.Series,
     *,

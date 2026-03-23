@@ -105,6 +105,33 @@ def threshold_weight(
     return w
 
 
+def signal_risk_weight(
+    scores: pd.Series,
+    volatility: pd.Series,
+    n: int = 20,
+    *,
+    gamma: float = 0.3,
+    gross_target: float = 1.0,
+) -> pd.Series:
+    """Signal-weighted inverse-volatility sizing for top-N stocks.
+
+    w_i = score_i^gamma / vol_i, then normalized to gross_target.
+    With gamma=0 this is pure inverse-vol; gamma=1 is signal-weighted inverse-vol.
+    For weak signals (IC < 0.05), gamma in [0.2, 0.5] is optimal.
+    """
+    if len(scores) == 0:
+        return pd.Series(dtype=float)
+    n = min(n, len(scores))
+    top_idx = scores.nlargest(n).index
+    w = pd.Series(0.0, index=scores.index)
+    sig = scores[top_idx].clip(lower=1e-8)
+    vol = volatility.reindex(top_idx).clip(lower=0.001)
+    raw = (sig ** gamma) / vol
+    if raw.sum() > 0:
+        w[top_idx] = raw / raw.sum() * gross_target
+    return w
+
+
 def topn_weight(
     scores: pd.Series,
     n: int = 20,
