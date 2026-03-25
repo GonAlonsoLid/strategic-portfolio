@@ -230,6 +230,21 @@ def build_main_report() -> str:
         "ic": _f4, "icir": _f4,
     }
 
+    # Pre-compute tables that need dict fmt (can't use {{}} inside f-strings)
+    ic_decay_table = _read_csv_as_table(TABLES / "ic_decay.csv", fmt={"horizon": _int, "ic": _f4})
+    subperiod_table = _read_csv_as_table(TABLES / "backtest_subperiod_3y.csv", fmt={
+        "annual_return": _pct2, "annual_volatility": _pct2,
+        "sharpe_ratio": _f3, "sortino_ratio": _f3,
+        "max_drawdown": _pct2, "calmar_ratio": _f3,
+        "var_05": _f4, "skewness": _f3,
+    })
+    robustness_table = _read_csv_as_table(TABLES / "robustness_holding_periods.csv", fmt={
+        "annual_return": _pct2, "annual_volatility": _pct2,
+        "sharpe_ratio": _f3, "sortino_ratio": _f3,
+        "max_drawdown": _pct2, "turnover": _f4,
+        "n_positions_avg": _f2,
+    })
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -354,7 +369,7 @@ def build_main_report() -> str:
 <p>The model discriminates well between future joiners/leavers and non-events (high AUC), but the extreme class imbalance (~2-4% positive rate) means precision at any threshold is inherently low. The IC of 0.017 is modest but statistically significant across the 20-year out-of-sample period.</p>
 
 <h3>Information Coefficient Decay</h3>
-{_read_csv_as_table(TABLES / "ic_decay.csv", fmt={{"horizon": _int, "ic": _f4}})}
+{ic_decay_table}
 <p>IC increases with horizon (1d &rarr; 63d), confirming the model captures medium-term membership transitions rather than short-term noise.</p>
 
 {_figure(FIGURES / "ic_decay.png", "Figure 2: IC decay across prediction horizons")}
@@ -437,12 +452,7 @@ def build_main_report() -> str:
 {_figure(FIGURES / "rolling_metrics.png", "Figure 10: Rolling 1-year Sharpe ratio and annual return")}
 
 <h3>Subperiod Analysis (Rolling 3-Year Windows)</h3>
-{_read_csv_as_table(TABLES / "backtest_subperiod_3y.csv", fmt={{
-    "annual_return": _pct2, "annual_volatility": _pct2,
-    "sharpe_ratio": _f3, "sortino_ratio": _f3,
-    "max_drawdown": _pct2, "calmar_ratio": _f3,
-    "var_05": _f4, "skewness": _f3,
-}})}
+{subperiod_table}
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <h1 id="robustness">9. Robustness Analysis</h1>
@@ -450,12 +460,7 @@ def build_main_report() -> str:
 <p>The strategy is tested across a grid of holding periods (1, 3, 6, 12 months) and position counts (5, 10, 20, 30, 50). This reveals which parameter combinations are robust and which are sensitive to specification.</p>
 
 <h3>Robustness Grid</h3>
-{_read_csv_as_table(TABLES / "robustness_holding_periods.csv", fmt={{
-    "annual_return": _pct2, "annual_volatility": _pct2,
-    "sharpe_ratio": _f3, "sortino_ratio": _f3,
-    "max_drawdown": _pct2, "turnover": _f4,
-    "n_positions_avg": _f2,
-}})}
+{robustness_table}
 
 {_figure(FIGURES / "robustness_heatmap_sharpe_ratio.png", "Figure 11: Robustness heatmap &mdash; Sharpe ratio across holding period x position count")}
 

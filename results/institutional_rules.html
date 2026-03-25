@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S&P 500 Institutional Rules</title>
+    <style>
+:root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --accent: #2c3e50;
+    --border: #dee2e6;
+    --highlight: #3498db;
+    --light-bg: #f8f9fa;
+    --green: #27ae60;
+    --red: #e74c3c;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+h1 {
+    font-size: 2rem;
+    color: var(--accent);
+    border-bottom: 3px solid var(--highlight);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+h2 {
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin: 2rem 0 0.8rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+}
+h3 {
+    font-size: 1.15rem;
+    color: var(--accent);
+    margin: 1.5rem 0 0.5rem;
+}
+p, li { margin-bottom: 0.5rem; }
+ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+th, td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+th {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+}
+tr:nth-child(even) { background: var(--light-bg); }
+tr:hover { background: #e8f4fd; }
+.figure {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+.figure img {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.figure figcaption {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+.highlight-box {
+    background: var(--light-bg);
+    border-left: 4px solid var(--highlight);
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border-radius: 0 4px 4px 0;
+}
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+.metric-card {
+    background: var(--light-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+.metric-card .value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--highlight);
+}
+.metric-card .label {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+}
+.toc { margin: 1rem 0 2rem; }
+.toc a { color: var(--highlight); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.toc li { margin-bottom: 0.3rem; }
+a { color: var(--highlight); }
+.positive { color: var(--green); font-weight: 600; }
+.negative { color: var(--red); font-weight: 600; }
+.nav-link {
+    display: inline-block;
+    margin: 0.5rem 0;
+    padding: 0.4rem 1rem;
+    background: var(--highlight);
+    color: white !important;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.nav-link:hover { background: #2980b9; }
+@media print {
+    body { max-width: 100%; padding: 1rem; }
+    .figure img { max-width: 90%; }
+}
+</style>
+</head>
+<body>
+<p><a href="report.html" class="nav-link">&larr; Back to Main Report</a></p>
+<h1>S&P 500 Index: Institutional Rules and Procedures</h1><h2>1. Overview</h2><p>The S&P 500 is a market-capitalization-weighted index of 500 large-cap U.S. equities, maintained by S&P Dow Jones Indices. Unlike rules-based indices, the S&P 500 is managed by an Index Committee that exercises discretion in constituent selection, making additions and deletions partially predictable but not fully deterministic.</p><h2>2. Eligibility Criteria for Inclusion</h2><p>A company must satisfy all of the following to be considered for addition:</p><table><thead><tr><th>Criterion</th><th>Requirement</th></tr></thead><tbody><tr><td>**Domicile**</td><td>U.S. company (determined by SEC filings, listing exchange, and revenue/asset location)</td></tr><tr><td>**Market capitalization**</td><td>Unadjusted market cap >= $18 billion (as of March 2024; threshold is reviewed periodically)</td></tr><tr><td>**Liquidity**</td><td>Annual dollar value traded / float-adjusted market cap >= 0.75</td></tr><tr><td>**Public float**</td><td>At least 50% of shares must be available for public trading</td></tr><tr><td>**Financial viability**</td><td>Positive as-reported earnings in the most recent quarter AND sum of trailing four quarters</td></tr><tr><td>**Sector balance**</td><td>The Committee considers sector representation relative to the broader market</td></tr><tr><td>**Seasoning**</td><td>Minimum 12 months since IPO</td></tr><tr><td>**Listing**</td><td>Must be listed on NYSE, NASDAQ, or Cboe BZX</td></tr></tbody></table><p><strong>Important:</strong> Meeting all criteria does not guarantee inclusion. The Committee has full discretion.</p><h2>3. Reasons for Deletion</h2><p>Stocks are removed from the index when they:</p><li>**No longer meet eligibility criteria**: market cap drops significantly, liquidity deteriorates, or financial viability is lost</li><li>**Corporate actions**: mergers, acquisitions, leveraged buyouts, or privatization</li><li>**Spin-offs or restructuring**: resulting entity no longer qualifies</li><li>**Bankruptcy or delisting**: company delists from qualifying exchanges</li><p>The Committee may also remove a stock proactively when it believes the company no longer represents the large-cap U.S. equity market.</p><h2>4. The Reconstitution Process</h2><h3>4.1 Timing</h3><li>There is **no fixed reconstitution schedule** (unlike the Russell indices which reconstitute annually)</li><li>Changes can occur at any time, typically announced 1-5 business days before the effective date</li><li>Most changes are driven by corporate events (M&A, spin-offs) rather than scheduled reviews</li><h3>4.2 Announcement and Effective Dates</h3><li>S&P announces changes via press release, typically after market close</li><li>The effective date is usually set for after the close of trading, giving market participants time to adjust</li><li>The lag between announcement and effective date is typically 3-5 trading days</li><h3>4.3 Buffer Zone</h3><li>The Committee uses an asymmetric buffer for market cap: a stock must fall well below the threshold before being considered for removal, while new additions must clearly exceed it</li><li>This prevents excessive turnover from stocks oscillating near the threshold</li><h2>5. The S&P 500 Index Effect</h2><h3>5.1 Addition Effect</h3><p>Academic literature documents significant abnormal returns around S&P 500 additions:</p><li>**Announcement effect**: +3% to +7% abnormal return on announcement day (Harris & Gurel 1986, Shleifer 1986)</li><li>**Price pressure hypothesis**: demand from index funds pushes prices up temporarily</li><li>**Information hypothesis**: addition signals quality, leading to permanent revaluation</li><li>**Recent evidence**: the addition effect has diminished over time, from ~5% in the 1990s to ~1-2% in recent years (Petajisto 2011)</li><h3>5.2 Deletion Effect</h3><li>Deletions show negative abnormal returns of -5% to -15%</li><li>The deletion effect tends to be larger and more persistent than the addition effect</li><li>Often confounded with the fundamental deterioration that caused the deletion</li><h3>5.3 Anticipation</h3><li>Market participants attempt to predict changes, leading to pre-announcement price movements</li><li>This "front-running" of index changes has increased over time as the strategy has become more well-known</li><li>The tradeable alpha from predicting index changes has decreased as the market has become more efficient</li><h2>6. Implications for Trading Strategy Design</h2><h3>6.1 Predictability</h3><p>The key predictable characteristics of future additions include:</p><li>Large and growing market capitalization (approaching the threshold)</li><li>High liquidity (meeting the turnover requirement)</li><li>Recent positive earnings</li><li>Currently not in the index but in the "eligible pool"</li><h3>6.2 Timing Challenges</h3><li>The exact timing of addition/deletion decisions is unknown in advance</li><li>The Committee meets periodically but changes can be announced at any time</li><li>The announcement-to-effective-date window is short (3-5 days)</li><li>A prediction model must be well-calibrated to avoid holding positions for extended periods before the event materializes</li><h3>6.3 Transaction Costs</h3><li>Trading around index changes involves competing with large index funds</li><li>The price impact of buying predicted additions may erode the expected alpha</li><li>Short selling candidates for deletion involves borrowing costs and potential short squeezes</li><h2>7. Data Sources</h2><li>**S&P 500 constituent changes**: S&P Dow Jones Indices press releases (dataset: `SPX_index leavers & joiners_17-Feb-2026.xlsx`)</li><li>**Daily stock data**: CRSP (Center for Research in Security Prices) daily stock file (dataset: `crsp_a_stock/daily.csv`)</li><h2>8. References</h2><li>Harris, L. & Gurel, E. (1986). Price and volume effects associated with changes in the S&P 500 list. *Journal of Finance*, 41(4), 815-829.</li><li>Shleifer, A. (1986). Do demand curves for stocks slope down? *Journal of Finance*, 41(3), 579-590.</li><li>Chen, H., Noronha, G. & Singal, V. (2004). The price response to S&P 500 index additions and deletions. *Journal of Finance*, 59(4), 1901-1929.</li><li>Petajisto, A. (2011). The index premium and its hidden cost for index funds. *Journal of Empirical Finance*, 18(2), 271-288.</li><li>S&P Dow Jones Indices (2024). S&P U.S. Indices Methodology.</li>
+<p><a href="report.html" class="nav-link">&larr; Back to Main Report</a></p>
+</body>
+</html>

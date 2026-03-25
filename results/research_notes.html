@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Research Notes & Academic Rationale</title>
+    <style>
+:root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --accent: #2c3e50;
+    --border: #dee2e6;
+    --highlight: #3498db;
+    --light-bg: #f8f9fa;
+    --green: #27ae60;
+    --red: #e74c3c;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+h1 {
+    font-size: 2rem;
+    color: var(--accent);
+    border-bottom: 3px solid var(--highlight);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+h2 {
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin: 2rem 0 0.8rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+}
+h3 {
+    font-size: 1.15rem;
+    color: var(--accent);
+    margin: 1.5rem 0 0.5rem;
+}
+p, li { margin-bottom: 0.5rem; }
+ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+th, td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+th {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+}
+tr:nth-child(even) { background: var(--light-bg); }
+tr:hover { background: #e8f4fd; }
+.figure {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+.figure img {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.figure figcaption {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+.highlight-box {
+    background: var(--light-bg);
+    border-left: 4px solid var(--highlight);
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border-radius: 0 4px 4px 0;
+}
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+.metric-card {
+    background: var(--light-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+.metric-card .value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--highlight);
+}
+.metric-card .label {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+}
+.toc { margin: 1rem 0 2rem; }
+.toc a { color: var(--highlight); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.toc li { margin-bottom: 0.3rem; }
+a { color: var(--highlight); }
+.positive { color: var(--green); font-weight: 600; }
+.negative { color: var(--red); font-weight: 600; }
+.nav-link {
+    display: inline-block;
+    margin: 0.5rem 0;
+    padding: 0.4rem 1rem;
+    background: var(--highlight);
+    color: white !important;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.nav-link:hover { background: #2980b9; }
+@media print {
+    body { max-width: 100%; padding: 1rem; }
+    .figure img { max-width: 90%; }
+}
+</style>
+</head>
+<body>
+<p><a href="report.html" class="nav-link">&larr; Back to Main Report</a></p>
+<h1>Research Notes: Feature Design & Academic Rationale</h1><p>This document maps the project's feature engineering and portfolio design to the academic literature on index effects, underreaction, and factor investing.</p><hr><h2>1. Performance & Risk Metrics</h2><table><thead><tr><th>Metric</th><th>Implementation</th></tr></thead><tbody><tr><td>**Alpha, Beta, Sharpe, factor models**</td><td>`evaluation/performance_metrics.py` (Sharpe, Sortino, Calmar), `evaluation/factor_analysis.py` (4-factor: Market, SMB, HML, MOM).</td></tr><tr><td>**Long-short, dollar-neutral**</td><td>`portfolio/portfolio_construction.py`: long top join probability, short top leave probability; configurable gross/net exposure.</td></tr><tr><td>**Tradable factors (Size, Value, Momentum, Quality)**</td><td>Size: `market_cap_rank`, `size_percentile`. Momentum: `ret_*d`, `mom_12m_skip1m`. Quality proxy: `quality_proxy` (return/vol).</td></tr><tr><td>**Backtesting discipline**</td><td>Rolling train/test splits (no lookahead), point-in-time features (shifted returns), config-driven.</td></tr><tr><td>**VaR, max drawdown, skewness**</td><td>`performance_metrics`: `max_drawdown`, `var_05`, `skewness`, `compute_subperiod_metrics` for stability.</td></tr><tr><td>**Overfitting / signal decay**</td><td>Rolling OOS evaluation; IC decay across horizons (1, 5, 21, 63 days).</td></tr></tbody></table><hr><h2>2. Feature Design — Academic Rationale</h2><table><thead><tr><th>Feature / Concept</th><th>Implementation</th><th>Academic Basis</th></tr></thead><tbody><tr><td>**Momentum (r(t-12,t-2), skip last month)**</td><td>`rolling_features.add_momentum_skip_month()` → `mom_12m_skip1m`</td><td>Jegadeesh & Titman (1993): skip last month reduces short-term reversal contamination.</td></tr><tr><td>**Profitability proxy**</td><td>`add_quality_proxy()` = past return / past volatility</td><td>Scalable proxy for accounting quality (no Compustat needed).</td></tr><tr><td>**Excess return vs market**</td><td>`add_abnormal_performance()` → `excess_ret_*d`</td><td>Abnormal returns relative to market-cap-weighted benchmark.</td></tr><tr><td>**Market cap rank**</td><td>`build_market_cap_rank()` → cross-sectional percentile</td><td>S&P 500 inclusion requires minimum market capitalization.</td></tr><tr><td>**Volatility features**</td><td>Rolling std over 21d, 63d, 126d windows</td><td>Liquidity/risk characteristics predictive of index membership changes.</td></tr></tbody></table><hr><h2>3. Implemented Analysis Components</h2><li>**Skip-month momentum** (`mom_12m_skip1m`): standard in literature; reduces reversal bias.</li><li>**Quality proxy** without accounting data: return/volatility over 1y as a scalable "quality" signal.</li><li>**Multiple weighting schemes** (equal, probability, risk-parity, rank, top-N): allows robustness testing.</li><li>**VaR(5%) and skewness**: tail risk metrics relevant for portfolio allocation.</li><li>**Subperiod stability**: rolling 3-year window metrics for regime analysis.</li><li>**4-factor attribution**: Market, SMB, HML, MOM regression; alpha and t-stat.</li><li>**IC decay**: Information coefficient across holding horizons (1, 5, 21, 63 days).</li><hr><h2>4. Possible Extensions</h2><li>**PEAD / SUE**: Add earnings surprise (requires IBES/earnings data) as additional feature.</li><li>**Profitability (accounting-based)**: With Compustat: ROA, ROE, EBIT/Assets for direct quality measurement.</li><li>**Accruals**: Sloan-style accruals anomaly (accruals/assets) with accounting data.</li><li>**Size-attention interaction**: Test whether predictability is stronger for small-cap stocks.</li><li>**Alternative data**: 13F filings, insider trades, customer/supply-chain links.</li><hr><h2>5. Key References</h2><li>Jegadeesh, N. & Titman, S. (1993). Returns to buying winners and selling losers. *Journal of Finance*.</li><li>Chen, H., Noronha, G. & Singal, V. (2004). The price response to S&P 500 index additions and deletions. *Journal of Finance*.</li><li>Petajisto, A. (2011). The index premium and its hidden cost for index funds. *Journal of Empirical Finance*.</li><li>Fama, E. & French, K. (1993). Common risk factors in the returns on stocks and bonds. *Journal of Financial Economics*.</li>
+<p><a href="report.html" class="nav-link">&larr; Back to Main Report</a></p>
+</body>
+</html>

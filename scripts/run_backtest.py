@@ -236,15 +236,7 @@ def main() -> None:
         print(f"    Sharpe: {best['metrics']['sharpe_ratio']:.3f}")
         print(f"    Annual return: {best['metrics']['annual_return']:.4f}")
 
-    # ── 10. Save daily returns for all key strategies ────────────────────
-    print("\n9. Saving daily return series...")
-    returns_dir = out_tab / "daily_returns"
-    returns_dir.mkdir(parents=True, exist_ok=True)
-    for s in all_strategies:
-        safe_name = s["name"].replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("=", "")
-        s["result"]["returns"].to_csv(returns_dir / f"{safe_name}.csv", header=True)
-
-    # ── 11. Figures ──────────────────────────────────────────────────────
+    # ── 10. Figures ──────────────────────────────────────────────────────
     print("\n10. Generating figures...")
 
     # Identify key strategies for comparison plots
