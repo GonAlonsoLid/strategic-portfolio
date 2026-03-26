@@ -42,7 +42,7 @@ def main():
     )
     ax.axhline(0, color="gray", linestyle="--", alpha=0.5)
     ax.set_ylabel("Annualised return")
-    ax.set_title("Best predictive strategy: rolling 3-year annualised return")
+    ax.set_title("Predictive (quantile, top 10%): rolling 3-year annualised return")
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.xaxis.set_major_locator(mdates.YearLocator())
@@ -58,7 +58,7 @@ def main():
     axes[0].plot(sub["midpoint"], sub["sharpe_ratio"], "o-", color="#3498db", linewidth=2, markersize=4)
     axes[0].axhline(0, color="gray", linestyle="--", alpha=0.5)
     axes[0].set_ylabel("Sharpe ratio")
-    axes[0].set_title("Best predictive strategy: rolling 3-year risk metrics")
+    axes[0].set_title("Predictive (quantile, top 10%): rolling 3-year risk metrics")
 
     # Max drawdown (negative convention)
     axes[1].fill_between(sub["midpoint"], sub["max_drawdown"], 0, alpha=0.4, color="#e74c3c")
