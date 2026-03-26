@@ -573,6 +573,31 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <p>If the intercept (&alpha;) is positive and statistically significant, the strategy is generating returns that these four factors cannot explain. Since the portfolio is dollar-neutral by construction (equal long/short exposure), the market beta should be close to zero.</p>
 
+<h3>Regression results (Quantile strategy)</h3>
+<table>
+<thead><tr><th>factor</th><th>coefficient</th><th>t_stat</th><th>p_value</th></tr></thead>
+<tbody>
+<tr><td>Alpha (annualised)</td><td>-0.0101</td><td>-1.006</td><td>0.3146</td></tr>
+<tr><td>MKT_RF</td><td>0.1582</td><td>9.458</td><td>0.0000</td></tr>
+<tr><td>SMB</td><td>-0.0800</td><td>-5.540</td><td>0.0000</td></tr>
+<tr><td>HML</td><td>0.0194</td><td>1.235</td><td>0.2169</td></tr>
+<tr><td>MOM</td><td>0.2143</td><td>15.055</td><td>0.0000</td></tr>
+<tr><td>R-squared</td><td>0.3742</td><td></td><td></td></tr>
+</tbody></table>
+
+<p>Factor data from Kenneth French's data library (daily). Newey-West standard errors (10 lags) to account for serial correlation.</p>
+
+<p>The alpha is -1.0% annualised and not statistically significant (t = -1.01, p = 0.31). This means the strategy's returns are largely explained by factor exposures rather than pure stock-picking skill. The factor loadings tell us where the returns come from:</p>
+
+<ul>
+<li>MKT_RF = 0.16 (t = 9.5): the portfolio has a small positive market beta despite being dollar-neutral. The long leg tends to have slightly higher beta stocks than the short leg.</li>
+<li>SMB = -0.08 (t = -5.5): the strategy is short small caps. This makes sense: stocks joining the S&amp;P 500 are large caps, stocks leaving tend to be shrinking.</li>
+<li>HML = 0.02 (t = 1.2, n.s.): no meaningful value tilt.</li>
+<li>MOM = 0.21 (t = 15.1): the strongest loading. The strategy is long recent winners and short recent losers. Stocks about to join the index tend to have been outperforming; stocks about to leave have been underperforming.</li>
+</ul>
+
+<p>R-squared of 0.37 means these four factors explain about a third of the return variance. The remaining two-thirds is idiosyncratic, which is expected for a strategy trading specific corporate events.</p>
+
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <h1 id="interpretation">10. Economic interpretation</h1>
 
