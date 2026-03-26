@@ -1,0 +1,2 @@
+annual_return,annual_volatility,sharpe_ratio,sortino_ratio,max_drawdown,calmar_ratio,var_05,skewness,avg_daily_turnover,avg_gross_exposure,avg_net_exposure,avg_transaction_cost,n_long_positions_total,n_short_positions_total,n_rebalance_dates,avg_long_per_rebal,avg_short_per_rebal
+0.15590724016619206,0.1629398391505901,0.9712614560605203,1.1872183845490307,0.5462117221420372,-0.2854337134230339,-0.014946300097318562,-0.6122369778492086,0.0007770167984240173,1.0,1.0,7.770167984240173e-07,2795935,2795935,361,7745.0,7745.0
