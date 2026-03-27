@@ -571,12 +571,12 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <tr><td>MKT-RF</td><td>Market excess return</td></tr>
 <tr><td>SMB</td><td>Small-minus-big (size)</td></tr>
 <tr><td>HML</td><td>High-minus-low (value)</td></tr>
-<tr><td>UMD</td><td>Up-minus-down (momentum)</td></tr>
+<tr><td>MOM</td><td>Momentum (up-minus-down)</td></tr>
 </tbody>
 </table>
 
 <p>The regression model is:</p>
-<p style="text-align:center;"><code>R<sub>p</sub> - R<sub>f</sub> = &alpha; + &beta;<sub>MKT</sub>(MKT-RF) + &beta;<sub>SMB</sub>(SMB) + &beta;<sub>HML</sub>(HML) + &beta;<sub>UMD</sub>(UMD) + &epsilon;</code></p>
+<p style="text-align:center;"><code>R<sub>p</sub> - R<sub>f</sub> = &alpha; + &beta;<sub>MKT</sub>(MKT-RF) + &beta;<sub>SMB</sub>(SMB) + &beta;<sub>HML</sub>(HML) + &beta;<sub>MOM</sub>(MOM) + &epsilon;</code></p>
 
 <p>If the intercept (&alpha;) is positive and statistically significant, the strategy is generating returns that these four factors cannot explain. The portfolio is dollar-neutral by construction, but dollar-neutrality does not guarantee zero market beta: the long and short legs can have different betas.</p>
 
@@ -607,7 +607,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <h3>Regression results (Composite-5 strategy)</h3>
 
-<p>The Composite-5 (&alpha;=0.25) strategy is the highest-returning predictive strategy (14.1% annual), beating even the omniscient benchmark in absolute terms. Does it generate genuine alpha, or is the extra return just factor exposure?</p>
+<p>The Composite-5 (&alpha;=0.25) strategy returns 14.1% annual, close behind Top-5 (probability) at 14.8% and ahead of the omniscient benchmark in absolute terms. Does it generate genuine alpha, or is the extra return just factor exposure?</p>
 
 <table>
 <thead><tr><th>factor</th><th>coefficient</th><th>t_stat</th><th>p_value</th></tr></thead>

@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 import base64
 import csv
+import html as html_mod
+import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -41,13 +43,13 @@ def _read_csv_as_table(path: Path, max_rows: int = 100, fmt: dict = None) -> str
     if not rows:
         return "<p><em>No data.</em></p>"
 
-    html = '<table>\n<thead><tr>'
+    tbl = '<table>\n<thead><tr>'
     display_headers = [h for h in headers if not h.startswith("_")]
     for h in display_headers:
-        html += f'<th>{h}</th>'
-    html += '</tr></thead>\n<tbody>\n'
+        tbl += f'<th>{html_mod.escape(str(h))}</th>'
+    tbl += '</tr></thead>\n<tbody>\n'
     for row in rows:
-        html += '<tr>'
+        tbl += '<tr>'
         for h in display_headers:
             val = row.get(h, "")
             if h in fmt:
@@ -55,13 +57,12 @@ def _read_csv_as_table(path: Path, max_rows: int = 100, fmt: dict = None) -> str
                     val = fmt[h](float(val))
                 except (ValueError, TypeError):
                     pass
-            html += f'<td>{val}</td>'
-        html += '</tr>\n'
-    html += '</tbody></table>'
-    return html
+            tbl += f'<td>{html_mod.escape(str(val))}</td>'
+        tbl += '</tr>\n'
+    tbl += '</tbody></table>'
+    return tbl
 
 
-def _pct(v): return f"{v:.1%}"
 def _pct2(v): return f"{v:.2%}"
 def _f2(v): return f"{v:.2f}"
 def _f3(v): return f"{v:.3f}"
@@ -564,12 +565,12 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <tr><td>MKT-RF</td><td>Market excess return</td></tr>
 <tr><td>SMB</td><td>Small-minus-big (size)</td></tr>
 <tr><td>HML</td><td>High-minus-low (value)</td></tr>
-<tr><td>UMD</td><td>Up-minus-down (momentum)</td></tr>
+<tr><td>MOM</td><td>Momentum (up-minus-down)</td></tr>
 </tbody>
 </table>
 
 <p>The regression model is:</p>
-<p style="text-align:center;"><code>R<sub>p</sub> - R<sub>f</sub> = &alpha; + &beta;<sub>MKT</sub>(MKT-RF) + &beta;<sub>SMB</sub>(SMB) + &beta;<sub>HML</sub>(HML) + &beta;<sub>UMD</sub>(UMD) + &epsilon;</code></p>
+<p style="text-align:center;"><code>R<sub>p</sub> - R<sub>f</sub> = &alpha; + &beta;<sub>MKT</sub>(MKT-RF) + &beta;<sub>SMB</sub>(SMB) + &beta;<sub>HML</sub>(HML) + &beta;<sub>MOM</sub>(MOM) + &epsilon;</code></p>
 
 <p>If the intercept (&alpha;) is positive and statistically significant, the strategy is generating returns that these four factors cannot explain. The portfolio is dollar-neutral by construction, but dollar-neutrality does not guarantee zero market beta: the long and short legs can have different betas.</p>
 
@@ -591,7 +592,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <h3>Regression results (Composite-5 strategy)</h3>
 
-<p>The Composite-5 (&alpha;=0.25) strategy is the highest-returning predictive strategy (14.1% annual), beating even the omniscient benchmark in absolute terms. Does it generate genuine alpha, or is the extra return just factor exposure?</p>
+<p>The Composite-5 (&alpha;=0.25) strategy returns 14.1% annual, close behind Top-5 (probability) at 14.8% and ahead of the omniscient benchmark in absolute terms. Does it generate genuine alpha, or is the extra return just factor exposure?</p>
 
 {factor_composite_table}
 
@@ -674,8 +675,6 @@ def build_institutional_rules_html() -> str:
             elif stripped.startswith("- "):
                 html_body.append(f"<li>{stripped[2:]}</li>")
             elif stripped:
-                # Bold markdown
-                import re
                 processed = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
                 processed = re.sub(r'\*(.+?)\*', r'<em>\1</em>', processed)
                 html_body.append(f"<p>{processed}</p>")
@@ -703,7 +702,6 @@ def build_research_notes_html() -> str:
     lines = content.split("\n")
     html_body = []
     in_table = False
-    is_first_header_row = True
     for line in lines:
         stripped = line.strip()
         if stripped == "---":
@@ -719,7 +717,6 @@ def build_research_notes_html() -> str:
             if not in_table:
                 html_body.append("<table>")
                 in_table = True
-                is_first_header_row = True
                 cells = [c.strip() for c in stripped.split("|")[1:-1]]
                 html_body.append("<thead><tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr></thead><tbody>")
             else:
@@ -736,7 +733,6 @@ def build_research_notes_html() -> str:
             elif stripped.startswith("- "):
                 html_body.append(f"<li>{stripped[2:]}</li>")
             elif stripped:
-                import re
                 processed = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
                 processed = re.sub(r'\*(.+?)\*', r'<em>\1</em>', processed)
                 processed = re.sub(r'`(.+?)`', r'<code>\1</code>', processed)

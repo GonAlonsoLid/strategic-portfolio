@@ -11,6 +11,7 @@ from pathlib import Path
 import io
 import zipfile
 import urllib.request
+import urllib.error
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -24,7 +25,10 @@ TABLES = BASE / "results" / "tables"
 
 def download_ff_daily(url):
     """Download a daily factor CSV from Kenneth French's website."""
-    resp = urllib.request.urlopen(url)
+    try:
+        resp = urllib.request.urlopen(url, timeout=30)
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Failed to download factor data from {url}: {exc}") from exc
     z = zipfile.ZipFile(io.BytesIO(resp.read()))
     fname = z.namelist()[0]
     raw = z.read(fname).decode("utf-8")
