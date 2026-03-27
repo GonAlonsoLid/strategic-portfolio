@@ -233,12 +233,6 @@ def build_main_report() -> str:
 
     # Pre-compute tables that need dict fmt (can't use {{}} inside f-strings)
     ic_decay_table = _read_csv_as_table(TABLES / "ic_decay.csv", fmt={"horizon": _int, "ic": _f4})
-    subperiod_table = _read_csv_as_table(TABLES / "backtest_subperiod_3y.csv", fmt={
-        "annual_return": _pct2, "annual_volatility": _pct2,
-        "sharpe_ratio": _f3, "sortino_ratio": _f3,
-        "max_drawdown": _pct2, "calmar_ratio": _f3,
-        "var_05": _f4, "skewness": _f3,
-    })
     robustness_table = _read_csv_as_table(TABLES / "robustness_holding_periods.csv", fmt={
         "annual_return": _pct2, "annual_volatility": _pct2,
         "sharpe_ratio": _f3, "sortino_ratio": _f3,
@@ -275,7 +269,6 @@ def build_main_report() -> str:
     <li><a href="#construction">Portfolio construction rules</a></li>
     <li><a href="#strategies">Strategy variants</a></li>
     <li><a href="#results">Performance results</a></li>
-    <li><a href="#annual">Return trajectory over time</a></li>
     <li><a href="#robustness">Robustness analysis</a></li>
     <li><a href="#factors">Factor risk decomposition</a></li>
     <li><a href="#interpretation">Economic interpretation</a></li>
@@ -501,35 +494,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 {_figure(FIGURES / "exposure.png", "Figure 8: Gross and net exposure over time")}
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<h1 id="annual">7. Return trajectory over time</h1>
-
-<p>Does the strategy work across different periods, or did it get lucky in one regime? These charts break down performance over time.</p>
-
-<h3>7.1 Rolling 3-year annualised return</h3>
-<p>Each bar is the annualised return over a 3-year window centered on that date. Green = positive, red = negative. Ideally the bars are all green and roughly the same height.</p>
-
-{_figure(FIGURES / "annual_returns.png", "Figure 9: Rolling 3-year annualised return for best predictive strategy")}
-
-<p>An important pattern emerges from this chart: the strategy's performance has improved over time. The early windows (2008&ndash;2013) show modest or negative returns, consistent with the financial crisis and its aftermath disrupting normal index reconstitution dynamics. But from 2015 onward, the rolling returns are consistently positive and increasing, with the most recent 3-year windows showing the strongest annualised returns in the entire sample.</p>
-
-<p>This is not a strategy that worked once and stopped. If anything, the signal has strengthened in recent years. A possible explanation: as passive indexing has grown (ETF assets tracking the S&amp;P 500 have roughly tripled since 2015), the mechanical buying and selling pressure around index changes has intensified, making the reconstitution premium larger and more predictable.</p>
-
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<h3>7.2 Rolling risk metrics</h3>
-
-<p>Three panels showing how the risk profile changes over time. Top: Sharpe ratio (above 0 = making risk-adjusted money). Middle: max drawdown (deeper red = larger losses in that window). Bottom: volatility (spikes = market stress).</p>
-
-{_figure(FIGURES / "rolling_metrics.png", "Figure 10: Rolling 3-year Sharpe, drawdown, and volatility")}
-
-<p>The rolling Sharpe panel confirms the trend: the strategy's risk-adjusted performance has improved. Post-2020 windows consistently show Sharpe ratios above 1.5, compared with sub-0.5 in the early years. Meanwhile, rolling volatility has declined and drawdowns have become shallower, suggesting the strategy is not just earning more but doing so with less risk.</p>
-
-<h3>7.3 Subperiod analysis (rolling 3-year windows)</h3>
-<p>Same data in table form. Each row is a 3-year window. Look at whether the numbers stay stable or swing wildly:</p>
-
-{subperiod_table}
-
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<h1 id="robustness">8. Robustness analysis</h1>
+<h1 id="robustness">7. Robustness analysis</h1>
 
 <p>If the strategy only works with one specific parameter choice, it is probably overfit. We test the Top-N equal-weight strategy across two dimensions: holding period (1, 3, 6, 12 months) and number of positions (5, 10, 20, 30, 50). That gives 20 combinations.</p>
 
@@ -555,7 +520,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <p>This is not a fully robust strategy in the traditional sense. It depends on two specific choices: monthly rebalancing and a small number of concentrated positions. But this is consistent with the nature of the signal. Index membership changes are infrequent events (~20 per year), and the anticipation premium is short-lived. A strategy designed to capture it needs to be nimble and selective.</p>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<h1 id="factors">9. Factor risk decomposition</h1>
+<h1 id="factors">8. Factor risk decomposition</h1>
 
 <p>Are these returns real alpha, or just compensation for loading on known risk factors? A Fama-French 4-factor regression decomposes the portfolio's excess returns into:</p>
 
@@ -599,7 +564,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <p>The Composite-5 generates an annualised alpha of 15.8% (t = 2.41, p = 0.016), which is statistically significant at the 5% level. Unlike the Quantile strategy, this concentrated approach produces returns that the four factors cannot fully explain. The momentum loading is also much larger (MOM = 1.07 vs 0.30), and R-squared drops to 0.30 vs 0.56 for the Quantile strategy. With only 5 positions per side, more of the return comes from individual stock picks rather than systematic factor tilts. A single earnings surprise or analyst upgrade can dominate the portfolio's return for that month.</p>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<h1 id="interpretation">10. Economic interpretation</h1>
+<h1 id="interpretation">9. Economic interpretation</h1>
 
 <h3>What we learned</h3>
 
@@ -618,7 +583,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <p>Our results are consistent with the literature. The long leg captures the addition premium documented by Chen, Noronha & Singal (2004). The short leg profits from the deletion effect. Sharpe ratios are modest overall, in line with Petajisto (2011)'s finding that the index effect has diminished as markets have become more efficient.</p>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<h1 id="references">11. References</h1>
+<h1 id="references">10. References</h1>
 <ul>
 <li>Chen, H., Noronha, G. & Singal, V. (2004). The price response to S&P 500 index additions and deletions. <em>Journal of Finance</em>, 59(4), 1901-1929.</li>
 <li>Fama, E. & French, K. (1993). Common risk factors in the returns on stocks and bonds. <em>Journal of Financial Economics</em>, 33(1), 3-56.</li>

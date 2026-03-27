@@ -259,8 +259,6 @@ def main() -> None:
     key_series = {}
     if omni:
         key_series["Omniscient"] = omni["result"]["returns"]
-    if quantile_strat:
-        key_series["Quantile (top 10%)"] = quantile_strat["result"]["returns"]
     if best:
         key_series[f"Best: {best['name']}"] = best["result"]["returns"]
     # Also add best Sharpe from each new category
