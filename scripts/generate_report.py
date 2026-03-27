@@ -432,12 +432,12 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 {_figure(FIGURES / "cumulative_returns_comparison.png", "Figure 3: Cumulative returns comparison across key strategies")}
 
-<p>The first thing that stands out is the gap between the Omniscient benchmark (blue, ~80x return) and everything else. The predictive strategies cluster near the bottom of the chart, but they are all positive. A few things to notice:</p>
+<p>The first thing that stands out is the gap between the Omniscient benchmark (blue) and everything else. The predictive strategies cluster near the bottom of the chart, but they are all positive. A few things to notice:</p>
 
 <ul>
-<li>The Omniscient (blue) has perfect foresight and still only gets a Sharpe of 0.97 with a 55% drawdown. This is a hard problem: even knowing exactly which stocks will join or leave, the price reactions are noisy and unpredictable.</li>
-<li>Composite-5 (red) has the highest cumulative return among predictive strategies (~15x), but it also has the worst drawdown (81%). It nearly wipes out multiple times.</li>
-<li>The predictive strategies only start generating meaningful returns around 2017, when the model's out-of-sample period begins and it has enough training data to produce useful signals.</li>
+<li>The Omniscient (blue) has perfect foresight and still only gets a Sharpe of 0.60 with a 55% drawdown. This is a hard problem: even knowing exactly which stocks will join or leave, the price reactions are noisy and unpredictable.</li>
+<li>Composite-5 (red) has the highest cumulative return among predictive strategies, but it also has the worst drawdown (81%). It nearly wipes out multiple times.</li>
+<li>All strategies are evaluated over the 2005&ndash;2024 period, starting from when the ML model first produces out-of-sample predictions. The model needs ~10 years of historical reconstitution events (1995&ndash;2004) for training before it can generate useful signals.</li>
 </ul>
 
 <!-- ── 6.2 Which strategy is "best"? ──────────────────────────────── -->
@@ -448,14 +448,14 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <table>
 <thead><tr><th>If you care about...</th><th>Best strategy</th><th>Value</th><th>Trade-off</th></tr></thead>
 <tbody>
-<tr><td><strong>Highest Sharpe ratio</strong> (risk-adjusted return)</td><td>Predictive (quantile)</td><td>0.609</td><td>Low return (3.8%), but very low volatility (6.5%) and drawdown (30%)</td></tr>
-<tr><td><strong>Highest cumulative return</strong></td><td>Top-5 (probability)</td><td>9.6% annual</td><td>Extreme volatility (28%) and drawdown (70%)</td></tr>
+<tr><td><strong>Highest Sharpe ratio</strong> (risk-adjusted return)</td><td>Predictive (quantile)</td><td>0.748</td><td>Moderate return (5.8%), low volatility (8.0%) and drawdown (30%)</td></tr>
+<tr><td><strong>Highest cumulative return</strong></td><td>Top-5 (probability)</td><td>14.8% annual</td><td>Extreme volatility (35%) and drawdown (70%)</td></tr>
 <tr><td><strong>Lowest maximum drawdown</strong></td><td>Predictive (quantile)</td><td>29.9%</td><td>Broad diversification (~743 positions) dilutes signal</td></tr>
-<tr><td><strong>Best composite signal</strong></td><td>Composite-5 (&alpha;=0.25)</td><td>9.2% annual, Sharpe 0.45</td><td>Worst drawdown of all strategies (81%)</td></tr>
+<tr><td><strong>Best composite signal</strong></td><td>Composite-5 (&alpha;=0.25)</td><td>14.1% annual, Sharpe 0.56</td><td>Worst drawdown of all strategies (81%)</td></tr>
 </tbody>
 </table>
 
-<p>The pattern is clear: concentrated strategies (Top-5, Composite-5) make more money in absolute terms because they bet big on a few stocks. Diversified strategies (Quantile) have better risk-adjusted numbers because spreading across ~743 positions smooths out stock-specific noise. You pick based on how much drawdown you can tolerate.</p>
+<p>The pattern is clear: concentrated strategies (Top-5, Composite-5) make more money in absolute terms because they bet big on a few stocks. Diversified strategies (Quantile) have better risk-adjusted numbers because spreading across ~743 positions smooths out stock-specific noise. The Quantile strategy's Sharpe of 0.748 actually beats the Omniscient benchmark's 0.60, showing that diversification can compensate for imperfect prediction. You pick based on how much drawdown you can tolerate.</p>
 
 <!-- ── 6.3 Full comparison table ───────────────────────────────────── -->
 <h3>6.3 Full strategy comparison</h3>
@@ -467,7 +467,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <!-- ── 6.4 Best strategy deep-dive ────────────────────────────────── -->
 <h3>6.4 Best risk-adjusted strategy up close</h3>
 
-<p>The Predictive (quantile) strategy has the highest Sharpe (0.609). It takes the top 10% of stocks by predicted probability on each side, which means ~743 positions per leg, rebalanced monthly.</p>
+<p>The Predictive (quantile) strategy has the highest Sharpe (0.748). It takes the top 10% of stocks by predicted probability on each side, which means ~743 positions per leg, rebalanced monthly.</p>
 
 <p>The return curve is slow but steady. Unlike the concentrated strategies, it does not spike or crash:</p>
 
@@ -480,7 +480,7 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 <!-- ── 6.5 Omniscient benchmark ────────────────────────────────────── -->
 <h3>6.5 The omniscient benchmark (the ceiling)</h3>
 
-<p>The omniscient strategy knows the future. It buys stocks that will join and shorts stocks that will leave, with zero prediction error. And yet: Sharpe of 0.97, max drawdown of 55%. This tells you something important about the problem itself. Index reconstitution is not a clean signal. Stock prices around additions and deletions are noisy, and the timing of price moves is unpredictable even when the event itself is known.</p>
+<p>The omniscient strategy knows the future. It buys stocks that will join and shorts stocks that will leave, with zero prediction error. And yet: Sharpe of 0.60, max drawdown of 55%. This tells you something important about the problem itself. Index reconstitution is not a clean signal. Stock prices around additions and deletions are noisy, and the timing of price moves is unpredictable even when the event itself is known.</p>
 
 {_figure(FIGURES / "drawdown_omniscient.png", "Figure 6: Drawdown of the omniscient benchmark, which lost 55% peak-to-trough despite perfect information")}
 
@@ -537,9 +537,9 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <p>Two clear patterns emerge from the grid:</p>
 
-<p>First, the strategy only works with monthly rebalancing (holding period = 1 month). With quarterly, semi-annual, or annual rebalancing, returns drop to near zero or go negative. For example, Top-5 goes from 9.5% annual return with monthly rebalancing to -1.0% with quarterly. The model's signal decays fast: if you do not act on it within a month, it is already stale.</p>
+<p>First, the strategy only works with monthly rebalancing (holding period = 1 month). With quarterly, semi-annual, or annual rebalancing, returns drop to near zero or go negative. The model's signal decays fast: if you do not act on it within a month, it is already stale.</p>
 
-<p>Second, fewer positions means better risk-adjusted returns. The Sharpe drops monotonically from 0.46 (N=5) to 0.14 (N=50) at monthly rebalancing. The model's predictive power is concentrated in its top-ranked stocks. Adding more positions just dilutes the signal with noise.</p>
+<p>Second, fewer positions means better risk-adjusted returns. The Sharpe drops monotonically from 0.57 (N=5) to 0.17 (N=50) at monthly rebalancing. The model's predictive power is concentrated in its top-ranked stocks. Adding more positions just dilutes the signal with noise.</p>
 
 <p>This is not a fully robust strategy in the traditional sense. It depends on two specific choices: monthly rebalancing and a small number of concentrated positions. But this is consistent with the nature of the signal. Index membership changes are infrequent events (~20 per year), and the anticipation premium is short-lived. A strategy designed to capture it needs to be nimble and selective.</p>
 
@@ -584,9 +584,9 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <h3>What we learned</h3>
 
-<p>The omniscient benchmark, which knows every future S&amp;P 500 change before it happens, achieves a Sharpe of 0.97. That is not a great Sharpe for a strategy with perfect information. It tells us that index reconstitution is a noisy signal: stock prices around additions and deletions move unpredictably even when the event itself is certain.</p>
+<p>The omniscient benchmark, which knows every future S&amp;P 500 change before it happens, achieves a Sharpe of 0.60. That is not a great Sharpe for a strategy with perfect information. It tells us that index reconstitution is a noisy signal: stock prices around additions and deletions move unpredictably even when the event itself is certain.</p>
 
-<p>Given that ceiling, the quantile-based strategy does well. Its Sharpe of 0.609 captures 63% of the omniscient's risk-adjusted return, with lower volatility (6.5% vs 16.3%) and a smaller drawdown (30% vs 55%). The diversification across ~743 positions per side helps a lot here.</p>
+<p>Given that ceiling, the quantile-based strategy actually exceeds the omniscient's risk-adjusted return. Its Sharpe of 0.748 vs 0.60 for the omniscient, with lower volatility (8.0% vs 17.7%) and a smaller drawdown (30% vs 55%). The diversification across ~743 positions per side helps a lot here &mdash; by spreading bets, the quantile strategy avoids the idiosyncratic blow-ups that hurt even the perfect-foresight portfolio.</p>
 
 <p>Concentrated strategies (Top-5, Composite-5) earn more in absolute terms but with painful drawdowns (70-81%). The more positions you add, the worse the Sharpe gets, which confirms the model's signal is strongest at the top of the ranking and dilutes quickly.</p>
 
