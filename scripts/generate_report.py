@@ -500,16 +500,16 @@ When a stock is added, it historically gained +3% to +7% in abnormal return (now
 
 <p>In the heatmaps: green cells are good, red cells are bad. If the whole map is green, the strategy is robust to parameter choice. If only one corner is green, it is fragile.</p>
 
-<h3>8.1 Robustness grid</h3>
+<h3>7.1 Robustness grid</h3>
 {robustness_table}
 
-{_figure(FIGURES / "robustness_heatmap_sharpe_ratio.png", "Figure 11: Sharpe ratio across parameter combinations (brighter green = better)")}
+{_figure(FIGURES / "robustness_heatmap_sharpe_ratio.png", "Figure 9: Sharpe ratio across parameter combinations (brighter green = better)")}
 
-{_figure(FIGURES / "robustness_heatmap_annual_return.png", "Figure 12: Annual return across parameter combinations (fewer positions = higher returns)")}
+{_figure(FIGURES / "robustness_heatmap_annual_return.png", "Figure 10: Annual return across parameter combinations (fewer positions = higher returns)")}
 
-{_figure(FIGURES / "robustness_heatmap_max_drawdown.png", "Figure 13: Maximum drawdown across parameter combinations (darker red = larger losses)")}
+{_figure(FIGURES / "robustness_heatmap_max_drawdown.png", "Figure 11: Maximum drawdown across parameter combinations (darker red = larger losses)")}
 
-<h3>8.2 What the robustness grid tells us</h3>
+<h3>7.2 What the robustness grid tells us</h3>
 
 <p>Two clear patterns emerge from the grid:</p>
 
